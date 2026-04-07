@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 240" width="600" height="240">
+  <rect width="600" height="240" fill="none"/>
+  <text x="300" y="100" text-anchor="middle" font-family="'Bebas Neue','Impact',sans-serif" font-size="80" fill="#000" letter-spacing="6">MANGO DRAGON</text>
+  <text x="300" y="160" text-anchor="middle" font-family="'Space Mono','Courier New',monospace" font-size="22" fill="#000" letter-spacing="6">INTERNATIONAL</text>
+  <line x1="150" y1="180" x2="450" y2="180" stroke="#000" stroke-width="1"/>
+</svg>

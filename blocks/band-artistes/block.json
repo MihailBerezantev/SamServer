@@ -1,0 +1,11 @@
+{
+  "$schema": "https://schemas.wp.org/trunk/block.json",
+  "apiVersion": 3,
+  "name": "mango-dragon/band-artistes",
+  "title": "Bande — Artistes",
+  "category": "mango-dragon",
+  "description": "Bande défilante des artistes du label.",
+  "textdomain": "mango-dragon",
+  "supports": { "html": false, "align": ["full"] },
+  "attributes": { "align": { "type": "string", "default": "full" } }
+}

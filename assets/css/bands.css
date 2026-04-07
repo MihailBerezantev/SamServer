@@ -1,0 +1,192 @@
+/* ==========================================================================
+   Scrolling Bands — 3 horizontal auto-scrolling bands on homepage
+   ========================================================================== */
+
+.scroll-band {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    background-color: var(--band-bg);
+    border-top: none;
+    border-bottom: none;
+    padding: var(--space-sm) 0;
+    transition: background-color var(--transition-normal);
+}
+
+.scroll-band + .scroll-band {
+    border-top: none;e
+}
+
+/* --- Track: the scrolling container --- */
+.band-track {
+    display: flex;
+    gap: 2rem;
+    width: max-content;
+    will-change: transform;
+}
+
+/* LTR scroll animation */
+.band-track--ltr {
+    animation: band-scroll-ltr var(--band-speed-1) linear infinite;
+}
+
+/* RTL scroll animation */
+.band-track--rtl {
+    animation: band-scroll-rtl var(--band-speed-2) linear infinite;
+}
+
+/* Third band speed */
+.band-track--ltr-slow {
+    animation: band-scroll-ltr var(--band-speed-3) linear infinite;
+}
+
+/* Pause on hover */
+.scroll-band:hover .band-track {
+    animation-play-state: paused;
+}
+
+/* --- Band Items --- */
+.band-item {
+    display: block;
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+.band-item--artist {
+    width: var(--band1-item-w, 440px);
+    height: var(--band1-item-h, 330px);
+}
+
+.band-item--release {
+    width: var(--band2-item-w, 320px);
+    height: var(--band2-item-h, 320px);
+}
+
+.band-item--photo {
+    width: var(--band3-item-w, 440px);
+    height: var(--band3-item-h, 330px);
+}
+
+.band-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform var(--transition-normal);
+}
+
+.band-item:hover img {
+    transform: scale(1.05);
+}
+
+.band-item__label {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: var(--space-xs) var(--space-sm);
+    background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+    font-family: var(--font-label);
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: #ffffff;
+    opacity: 0;
+    transition: opacity var(--transition-normal);
+}
+
+.band-item:hover .band-item__label {
+    opacity: 1;
+}
+
+/* --- Navigation Arrows --- */
+.band-arrow {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    font-size: 1.2rem;
+    color: #ffffff;
+    background: rgba(0, 0, 0, 0.4);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity var(--transition-normal);
+}
+
+.scroll-band:hover .band-arrow {
+    opacity: 1;
+}
+
+.band-arrow:hover {
+    background: rgba(0, 0, 0, 0.7);
+}
+
+.band-arrow--left {
+    left: 0;
+}
+
+.band-arrow--right {
+    right: 0;
+}
+
+/* --- Full-width when used as Gutenberg block --- */
+.wp-block-mango-dragon-band-artistes,
+.wp-block-mango-dragon-band-releases,
+.wp-block-mango-dragon-band-photos {
+    width: 100vw;
+    position: relative;
+    left: 50%;
+    right: 50%;
+    margin-left: -50vw;
+    margin-right: -50vw;
+}
+
+/* Same for alignfull wrapper */
+.alignfull:is(
+    .wp-block-mango-dragon-band-artistes,
+    .wp-block-mango-dragon-band-releases,
+    .wp-block-mango-dragon-band-photos
+) {
+    max-width: none;
+}
+
+/* --- Keyframes --- */
+@keyframes band-scroll-ltr {
+    100% {
+        transform: translateX(-50%);
+    }
+}
+
+@keyframes band-scroll-rtl {
+    0% {
+        transform: translateX(-50%);
+    }
+    100% {
+        transform: translateX(0);
+    }
+}
+
+/* --- Responsive --- */
+@media (max-width: 640px) {
+    .band-item--artist,
+    .band-item--photo {
+        width: 320px;
+        height: 240px;
+    }
+
+    .band-item--release {
+        width: 240px;
+        height: 240px;
+    }
+
+    .band-arrow {
+        width: 30px;
+        font-size: 1rem;
+    }
+}

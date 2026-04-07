@@ -1,0 +1,95 @@
+/* ==========================================================================
+   CSS Custom Properties — Bright Mode (default) + Dark Mode
+   ========================================================================== */
+
+:root {
+    /* --- Colors: Bright mode (default) --- */
+    --color-bg: #f7f4eb;
+    --color-text: #000000;
+    --color-text-secondary: #333333;
+    --color-text-muted: #666666;
+    --color-surface: #ffffff;
+    --color-border: #d9d6cd;
+    --color-hover: #eae7de;
+    --color-overlay: rgba(0, 0, 0, 0.7);
+
+    /* Fixed reference colors */
+    --color-white: #ffffff;
+    --color-black: #000000;
+    --color-beige: #f7f4eb;
+
+    /* --- Typography --- */
+    --font-display: 'Bebas Neue', 'Anton', Impact, sans-serif;
+    --font-label: 'Space Mono', 'IBM Plex Mono', monospace;
+    --font-body: 'DM Mono', 'Courier Prime', monospace;
+
+    /* --- Spacing --- */
+    --space-2xs: 0.25rem;
+    --space-xs: 0.5rem;
+    --space-sm: 1rem;
+    --space-md: 1.5rem;
+    --space-lg: 2rem;
+    --space-xl: 3rem;
+    --space-2xl: 5rem;
+    --space-3xl: 8rem;
+
+    /* --- Layout --- */
+    --container-max: 1440px;
+    --container-padding: 2rem;
+    --grid-gap: 1.5rem;
+
+    /* --- Transitions --- */
+    --transition-color: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+    --transition-fast: 0.15s ease;
+    --transition-normal: 0.3s ease;
+
+    /* --- Component sizes --- */
+    --player-height: 80px;
+    --navbar-height: 80px;
+
+    /* --- Logo --- */
+    --logo-filter: none; /* Logo is black by default — no filter in bright mode */
+
+    /* --- Player controls color (independent from menu) --- */
+    --player-color: #000000;
+
+    /* --- Mode-specific backgrounds --- */
+    --band-bg: #ffffff;       /* Bands background: white in bright mode */
+    --footer-bg: #f7f4eb;     /* Footer background: beige in bright mode */
+    --footer-text: #000000;
+    --footer-text-muted: #666666;
+    --footer-border: #d9d6cd;
+
+    /* --- Band speeds (seconds for one full cycle) --- */
+    --band-speed-1: 110s;
+    --band-speed-2: 120s;
+    --band-speed-3: 160s;
+}
+
+/* ==========================================================================
+   Dark Mode
+   ========================================================================== */
+
+html.dark-mode {
+    --color-bg: #000000;
+    --color-text: #f7f4eb;
+    --color-text-secondary: #cccccc;
+    --color-text-muted: #999999;
+    --color-surface: #f7f4eb;
+    --color-border: #222222;
+    --color-hover: #1a1a1a;
+    --color-overlay: rgba(0, 0, 0, 0.85);
+
+    /* Invert black logo to white in dark mode */
+    --logo-filter: invert(1);
+
+    /* Player controls color in dark mode */
+    --player-color: #000000;
+
+    /* Inverted mode-specific backgrounds */
+    --band-bg: #252525;       /* Bands background: very dark brown in dark mode */
+    --footer-bg: #000000;     /* Footer background: black in dark mode */
+    --footer-text: #f7f4eb;
+    --footer-text-muted: #999999;
+    --footer-border: #222222;
+}

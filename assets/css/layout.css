@@ -1,0 +1,128 @@
+/* ==========================================================================
+   Layout — Container, Grids, Responsive
+   ========================================================================== */
+
+.container {
+    width: 100%;
+    max-width: var(--container-max);
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: var(--container-padding);
+    padding-right: var(--container-padding);
+}
+
+.container--narrow {
+    max-width: 900px;
+}
+
+/* --- Section spacing --- */
+.section {
+    padding-top: var(--space-xl);
+    padding-bottom: 0;
+}
+
+.section + .section {
+    padding-top: var(--space-sm);
+}
+
+.section--tight {
+    padding-top: var(--space-xl);
+    padding-bottom: 0;
+}
+
+/* --- Cards Grid --- */
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--grid-gap);
+}
+
+@media (max-width: 1024px) {
+    .cards-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .cards-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* --- Two Column Layout --- */
+.two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-xl);
+    align-items: start;
+}
+
+@media (max-width: 768px) {
+    .two-col {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* --- Three Column Layout --- */
+.three-col {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--grid-gap);
+}
+
+@media (max-width: 768px) {
+    .three-col {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* --- Flex utilities --- */
+.flex {
+    display: flex;
+}
+
+.flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.flex-between {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.flex-wrap {
+    flex-wrap: wrap;
+}
+
+.flex-col {
+    flex-direction: column;
+}
+
+.gap-xs { gap: var(--space-xs); }
+.gap-sm { gap: var(--space-sm); }
+.gap-md { gap: var(--space-md); }
+.gap-lg { gap: var(--space-lg); }
+
+/* --- Text alignment --- */
+.text-center { text-align: center; }
+
+/* --- Responsive container padding --- */
+@media (max-width: 640px) {
+    :root {
+        --container-padding: 1rem;
+    }
+}
+
+/* --- Flush content against navbar and footer --- */
+.site-content > *:first-child {
+    padding-top: 0;
+    margin-top: 0;
+}
+
+.site-content > *:last-child {
+    padding-bottom: 0;
+    margin-bottom: 0;
+}

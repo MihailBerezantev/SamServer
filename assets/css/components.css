@@ -1,0 +1,374 @@
+/* ==========================================================================
+   Components — Cards, Buttons, Forms, Filters, Social
+   ========================================================================== */
+
+/* --- Card: Artiste --- */
+.card-artiste {
+    position: relative;
+    overflow: hidden;
+    border-radius: 2px;
+    background-color: var(--color-surface);
+    transition: var(--transition-color);
+    cursor: pointer;
+}
+
+.card-artiste__image {
+    width: 100%;
+    aspect-ratio: 4 / 5;
+    object-fit: cover;
+    display: block;
+    transition: transform var(--transition-normal);
+}
+
+.card-artiste:hover .card-artiste__image {
+    transform: scale(1.03);
+}
+
+.card-artiste__overlay {
+    position: absolute;
+    inset: 0;
+    background: var(--color-overlay);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity var(--transition-normal);
+}
+
+.card-artiste:hover .card-artiste__overlay {
+    opacity: 1;
+}
+
+.card-artiste__name {
+    font-family: var(--font-display);
+    font-size: 1.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-beige);
+}
+
+.card-artiste__cta {
+    font-family: var(--font-label);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--color-beige);
+    margin-top: var(--space-xs);
+    opacity: 0.7;
+}
+
+/* --- Card: Release --- */
+.card-release {
+    position: relative;
+    overflow: hidden;
+    border-radius: 2px;
+    background-color: var(--color-surface);
+    transition: var(--transition-color);
+    cursor: pointer;
+}
+
+.card-release__image {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    display: block;
+    transition: transform var(--transition-normal);
+}
+
+.card-release:hover .card-release__image {
+    transform: scale(1.03);
+}
+
+.card-release__overlay {
+    position: absolute;
+    inset: 0;
+    background: var(--color-overlay);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity var(--transition-normal);
+    padding: var(--space-sm);
+    text-align: center;
+}
+
+.card-release:hover .card-release__overlay {
+    opacity: 1;
+}
+
+.card-release__title {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    text-transform: uppercase;
+    color: var(--color-beige);
+}
+
+.card-release__artist {
+    font-family: var(--font-label);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--color-beige);
+    margin-top: var(--space-2xs);
+    opacity: 0.7;
+}
+
+/* --- Buttons --- */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+    font-family: var(--font-label);
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    padding: 0.875rem 2rem;
+    border: 1px solid var(--color-text);
+    color: var(--color-text);
+    background-color: transparent;
+    cursor: pointer;
+    transition: var(--transition-color), opacity var(--transition-fast);
+}
+
+.btn:hover {
+    background-color: var(--color-text);
+    color: var(--color-bg);
+}
+
+.btn--filled {
+    background-color: var(--color-text);
+    color: var(--color-bg);
+}
+
+.btn--filled:hover {
+    opacity: 0.85;
+}
+
+.btn--small {
+    padding: 0.5rem 1.25rem;
+    font-size: 0.7rem;
+}
+
+.btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+/* --- Filter Bar --- */
+.filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-xl);
+}
+
+.filter-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+    align-items: center;
+}
+
+.filter-group__label {
+    font-family: var(--font-label);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--color-text-muted);
+    margin-right: var(--space-xs);
+}
+
+.filter-pill {
+    font-family: var(--font-label);
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.4rem 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0;
+    color: var(--color-text-secondary);
+    background: transparent;
+    cursor: pointer;
+    transition: var(--transition-color), border-color var(--transition-normal);
+    white-space: nowrap;
+}
+
+.filter-pill:hover {
+    border-color: var(--color-text);
+    color: var(--color-text);
+}
+
+.filter-pill.active {
+    background-color: var(--color-text);
+    color: var(--color-bg);
+    border-color: var(--color-text);
+}
+
+.filter-reset {
+    font-family: var(--font-label);
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    padding: 0.4rem 0.75rem;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+/* --- Forms --- */
+.form-group {
+    margin-bottom: var(--space-md);
+}
+
+.form-label {
+    display: block;
+    font-family: var(--font-label);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-xs);
+}
+
+.form-input,
+.form-textarea {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0;
+    background-color: var(--color-surface);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    transition: var(--transition-color), border-color var(--transition-normal);
+}
+
+.form-input:focus,
+.form-textarea:focus {
+    border-color: var(--color-text);
+    outline: none;
+}
+
+.form-textarea {
+    resize: vertical;
+    min-height: 120px;
+}
+
+.form-input::placeholder,
+.form-textarea::placeholder {
+    color: var(--color-text-muted);
+}
+
+.form-message {
+    font-family: var(--font-body);
+    font-size: 0.9rem;
+    padding: var(--space-sm);
+    margin-top: var(--space-sm);
+}
+
+.form-message--success {
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+}
+
+.form-message--error {
+    color: var(--color-text);
+    border: 1px solid var(--color-text);
+}
+
+/* --- File Upload Zone --- */
+.upload-zone {
+    border: 2px dashed var(--color-border);
+    padding: var(--space-lg);
+    text-align: center;
+    cursor: pointer;
+    transition: var(--transition-color), border-color var(--transition-normal);
+}
+
+.upload-zone:hover,
+.upload-zone.dragover {
+    border-color: var(--color-text);
+}
+
+.upload-zone__text {
+    font-family: var(--font-label);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--color-text-muted);
+}
+
+.upload-zone__formats {
+    font-family: var(--font-body);
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    margin-top: var(--space-xs);
+}
+
+.upload-file-list {
+    margin-top: var(--space-sm);
+}
+
+.upload-file-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-xs) 0;
+    border-bottom: 1px solid var(--color-border);
+    font-size: 0.85rem;
+}
+
+.upload-file-remove {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+/* --- Social Icons --- */
+.social-links {
+    display: flex;
+    align-items: center;
+    gap: 0.2rem;
+}
+
+.social-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    transition: opacity var(--transition-fast);
+}
+
+.social-link:hover {
+    opacity: 0.6;
+}
+
+.social-link svg {
+    width: 22px;
+    height: 22px;
+    fill: var(--color-text);
+    transition: fill var(--transition-normal);
+}
+
+/* --- Tags / Genre pills inline --- */
+.tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+}
+
+.tag {
+    font-family: var(--font-label);
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 0.25rem 0.75rem;
+    border: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
+}
