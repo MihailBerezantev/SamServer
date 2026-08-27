@@ -179,6 +179,45 @@ function md_bots_render( $slug, array $bot ) {
     <div class="wrap md-bots">
         <h1><?php echo esc_html( $bot['titre'] ); ?></h1>
 
+        <?php
+        // Compte rendu de la dernière exécution lancée depuis cette page.
+        if ( isset( $_GET['md_bot_msg'] ) ) :
+            $msg = sanitize_text_field( rawurldecode( wp_unslash( $_GET['md_bot_msg'] ) ) );
+            $ok  = ! empty( $_GET['md_bot_ok'] );
+            ?>
+            <div class="notice <?php echo $ok ? 'notice-success' : 'notice-error'; ?> inline">
+                <p><?php echo esc_html( $msg ); ?></p>
+            </div>
+        <?php endif; ?>
+
+        <?php
+        // Le bouton n'apparaît que pour les bots dotés d'un runner.
+        if ( 'subventions' === $slug && function_exists( 'md_bots_run_subventions' ) ) :
+            $etat = get_option( 'md_omniroute_status' );
+            ?>
+            <p>
+                <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline">
+                    <input type="hidden" name="action" value="md_bots_run">
+                    <?php wp_nonce_field( 'md_bots_run' ); ?>
+                    <button type="submit" class="button button-primary">Lancer la recherche</button>
+                </form>
+                <span class="description" style="margin-left:10px">
+                    Moteur :
+                    <?php if ( is_array( $etat ) && ! empty( $etat['etat'] ) ) : ?>
+                        <?php echo esc_html( $etat['etat'] ); ?>
+                        (vérifié le <?php echo esc_html( $etat['verifie_le'] ); ?>)
+                    <?php else : ?>
+                        état inconnu, la surveillance n'a pas encore tourné
+                    <?php endif; ?>
+                </span>
+            </p>
+            <p class="description">
+                La recherche lit des pages officielles et en fait extraire le contenu par un modèle
+                gratuit. Elle prend une à trois minutes. Tout ressort en « à vérifier » : le modèle
+                lit fidèlement mais se trompe sur les détails — la validation reste la tienne.
+            </p>
+        <?php endif; ?>
+
         <?php if ( '' !== $data['execute_le'] ) : ?>
             <p class="description">
                 Dernière recherche : <strong><?php echo esc_html( $data['execute_le'] ); ?></strong>
