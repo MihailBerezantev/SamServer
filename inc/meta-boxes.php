@@ -207,6 +207,42 @@ function md_release_tracklist_cb( $post ) {
             }
         });
 
+        /* Durée : formate des secondes en M:SS (ou H:MM:SS au-delà d'une heure),
+           le format attendu par le champ et lu tel quel par le player. */
+        function mdFormatDuration(seconds) {
+            if (!isFinite(seconds) || seconds <= 0) return '';
+            var total = Math.round(seconds);
+            var h = Math.floor(total / 3600);
+            var m = Math.floor((total % 3600) / 60);
+            var s = total % 60;
+            var pad = function (n) { return n < 10 ? '0' + n : String(n); };
+            return h > 0 ? h + ':' + pad(m) + ':' + pad(s) : m + ':' + pad(s);
+        }
+
+        /* Repli : WordPress n'expose fileLength que s'il a pu lire les
+           métadonnées du fichier à l'upload (getID3). Pour les fichiers plus
+           anciens ou dont l'analyse a échoué, on demande la durée au navigateur.
+           Échec silencieux : la saisie manuelle reste possible. */
+        function mdFillDurationFromFile(url, input) {
+            if (!url || !input) return;
+            var audio = new Audio();
+            audio.preload = 'metadata';
+            audio.addEventListener('loadedmetadata', function () {
+                var value = mdFormatDuration(audio.duration);
+                if (value && !input.value) input.value = value;
+            });
+            audio.src = url;
+        }
+
+        function mdRowInputs(el) {
+            var row = el.closest('.md-track-row');
+            return {
+                title:    row.querySelector('input[name*="[title]"]'),
+                duration: row.querySelector('input[name*="[duration]"]'),
+                url:      row.querySelector('.md-audio-url')
+            };
+        }
+
         /* Media Library browser for audio files */
         var mediaFrame;
         tbody.addEventListener('click', function(e) {
@@ -214,7 +250,9 @@ function md_release_tracklist_cb( $post ) {
 
             var btn = e.target;
             var urlInput = btn.parentElement.querySelector('.md-audio-url');
-            var titleInput = btn.closest('.md-track-row').querySelector('input[name*="[title]"]');
+            var fields = mdRowInputs(btn);
+            var titleInput = fields.title;
+            var durationInput = fields.duration;
 
             if (mediaFrame) {
                 mediaFrame.off('select');
@@ -233,9 +271,27 @@ function md_release_tracklist_cb( $post ) {
                 if (titleInput && !titleInput.value) {
                     titleInput.value = attachment.title || attachment.filename.replace(/\.[^.]+$/, '');
                 }
+                /* Ne jamais écraser une durée saisie à la main. */
+                if (durationInput && !durationInput.value) {
+                    if (attachment.fileLength) {
+                        durationInput.value = attachment.fileLength;
+                    } else {
+                        mdFillDurationFromFile(attachment.url, durationInput);
+                    }
+                }
             });
 
             mediaFrame.open();
+        });
+
+        /* Même service quand l'URL est collée à la main plutôt que choisie
+           dans la médiathèque. */
+        tbody.addEventListener('change', function (e) {
+            if (!e.target.classList.contains('md-audio-url')) return;
+            var fields = mdRowInputs(e.target);
+            if (fields.duration && !fields.duration.value) {
+                mdFillDurationFromFile(e.target.value, fields.duration);
+            }
         });
     })();
     </script>
