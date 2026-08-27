@@ -1502,24 +1502,31 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
     letter-spacing: 0.02em;
     line-height: 1.05;
     text-align: center;
-    color: var(--color-text);
+    color: var(--color-text-muted);
     margin: var(--space-md) 0 var(--space-sm);
 }
 
-/* Le nom de l'artiste mène à sa fiche. Soulignement présent AU REPOS et non
-   au seul survol : un lien qui ne se révèle qu'au passage de la souris est
-   invisible pour qui ne survole pas, et inatteignable au tactile. */
+/* Le nom de l'artiste mène à sa fiche.
+
+   La palette du site est strictement monochrome : pas de couleur d'accent
+   disponible pour marquer un lien. On joue donc sur le contraste plutôt que
+   sur la teinte — le libellé « Collection by » s'efface en gris, le nom garde
+   la couleur de texte pleine. Le nom devient l'élément le plus contrasté de
+   la ligne, donc celui que l'œil désigne comme actionnable.
+
+   Le soulignement au survol n'est qu'une confirmation : l'indice au repos est
+   le contraste, pas le survol. */
 .visual-collection__by a {
-    color: inherit;
-    text-decoration: underline;
+    color: var(--color-text);
+    text-decoration: none;
     text-decoration-thickness: 2px;
     text-underline-offset: 0.12em;
-    text-decoration-color: var(--color-text-muted);
     transition: text-decoration-color var(--transition-fast);
 }
 
 .visual-collection__by a:hover,
 .visual-collection__by a:focus-visible {
+    text-decoration: underline;
     text-decoration-color: currentColor;
 }
 
