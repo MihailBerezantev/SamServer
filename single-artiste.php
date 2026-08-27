@@ -171,6 +171,31 @@ usort( $past_gigs, function ( $a, $b ) { return strcmp( $b['date'], $a['date'] )
     </div>
 </section>
 
+<!-- VIDEOS : mix et sets VJ (YouTube) -->
+<?php
+$video_ids = md_youtube_ids( get_post_meta( $artiste_id, '_md_videos', true ) );
+if ( $video_ids ) :
+?>
+<section class="single-videos section">
+    <div class="container">
+        <h2>Videos</h2>
+        <div class="video-grid">
+            <?php foreach ( $video_ids as $md_vid ) : ?>
+            <div class="video-embed">
+                <iframe
+                    src="<?php echo esc_url( md_youtube_embed_url( $md_vid ) ); ?>"
+                    title="<?php echo esc_attr( sprintf( 'Vidéo de %s', get_the_title( $artiste_id ) ) ); ?>"
+                    loading="lazy"
+                    allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    referrerpolicy="strict-origin-when-cross-origin"
+                    allowfullscreen></iframe>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</section>
+<?php endif; ?>
+
 <!-- GIGS : Upcoming gigs + Past events (tri automatique par date) -->
 <?php if ( $upcoming_gigs || $past_gigs ) : ?>
 <section class="single-gigs section">

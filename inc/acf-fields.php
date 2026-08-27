@@ -103,6 +103,17 @@ function md_acf_group_definitions() {
                     'type'     => 'url',
                     'required' => 0,
                 ],
+                [
+                    'key'          => 'field_md_videos',
+                    'label'        => 'Vidéos YouTube',
+                    'name'         => 'mdacf_videos',
+                    'type'         => 'textarea',
+                    'rows'         => 4,
+                    // Pas de wpautop : le contenu est une liste d'URL, pas de la prose.
+                    'new_lines'    => '',
+                    'instructions' => 'Une URL par ligne (mix, set VJ…). Formats acceptés : youtube.com/watch?v=…, youtu.be/…, /shorts/…',
+                    'required'     => 0,
+                ],
             ],
             'location'              => [
                 [ [ 'param' => 'post_type', 'operator' => '==', 'value' => 'artiste' ] ],

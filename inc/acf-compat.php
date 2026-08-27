@@ -139,6 +139,13 @@ function md_acf_mirror_to_meta( $post_id ) {
         }
         // Also keep the legacy array for backward compat
         update_post_meta( $post_id, '_md_social_links', $social );
+
+        // Vidéos YouTube : textarea, une URL par ligne.
+        $videos = get_field( 'mdacf_videos', $post_id );
+        if ( $videos === null || $videos === false ) {
+            $videos = '';
+        }
+        update_post_meta( $post_id, '_md_videos', $videos );
     }
 
     // -----------------------------------------------------------------------
@@ -217,6 +224,7 @@ function md_acf_register_load_value_fallbacks() {
         'mdacf_social_bandcamp'   => '_md_social_bandcamp',
         'mdacf_social_spotify'    => '_md_social_spotify',
         'mdacf_social_website'    => '_md_social_website',
+        'mdacf_videos'            => '_md_videos',
     ];
 
     foreach ( $artiste_map as $acf_name => $meta_key ) {
