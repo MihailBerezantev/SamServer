@@ -1502,7 +1502,7 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
     letter-spacing: 0.02em;
     line-height: 1.05;
     text-align: center;
-    color: var(--color-text-muted);
+    color: var(--color-text);
     margin: var(--space-md) 0 var(--space-sm);
 }
 
@@ -1510,14 +1510,14 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 
    La palette du site est strictement monochrome : pas de couleur d'accent
    disponible pour marquer un lien. On joue donc sur le contraste plutôt que
-   sur la teinte — le libellé « Collection by » s'efface en gris, le nom garde
-   la couleur de texte pleine. Le nom devient l'élément le plus contrasté de
-   la ligne, donc celui que l'œil désigne comme actionnable.
+   sur la teinte — le libellé « Collection by » garde le noir plein, le nom
+   passe en gris.
 
-   Le soulignement au survol n'est qu'une confirmation : l'indice au repos est
-   le contraste, pas le survol. */
+   Choix assumé de l'auteur du site, contre la convention : un élément moins
+   contrasté que son entourage se lit d'ordinaire comme secondaire, pas comme
+   actionnable. Le soulignement au survol reste donc le seul renfort. */
 .visual-collection__by a {
-    color: var(--color-text);
+    color: var(--color-text-muted);
     text-decoration: none;
     text-decoration-thickness: 2px;
     text-underline-offset: 0.12em;
