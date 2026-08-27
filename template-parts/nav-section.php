@@ -16,7 +16,7 @@ $nav_items = [
     ],
     [
         'url'   => get_post_type_archive_link( 'release' ),
-        'title' => 'Discography',
+        'title' => 'Releases',
         'desc'  => 'Albums, EPs, singles',
     ],
     [

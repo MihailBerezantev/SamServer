@@ -252,11 +252,11 @@ if ( $video_ids ) :
 </section>
 <?php endif; ?>
 
-<!-- DISCOGRAPHY -->
+<!-- RELEASES -->
 <?php if ( ! empty( $artist_releases ) ) : ?>
 <section class="single-releases section">
     <div class="container">
-        <h2>Discography</h2>
+        <h2>Releases</h2>
         <div class="cards-grid">
             <?php foreach ( $artist_releases as $release ) :
                 set_query_var( 'release', $release );
