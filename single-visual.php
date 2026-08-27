@@ -16,11 +16,9 @@ $release_ids = is_array( $release_ids ) ? $release_ids : [];
 $visual_types = get_the_terms( $visual_id, 'visual_type' );
 
 // Artist names and links (même pattern que single-release.php)
-$artists_html  = [];
-$artist_names  = [];
+$artists_html = [];
 foreach ( $artist_ids as $aid ) {
     $artists_html[] = '<a href="' . esc_url( get_permalink( $aid ) ) . '" data-ajax-link>' . esc_html( get_the_title( $aid ) ) . '</a>';
-    $artist_names[] = get_the_title( $aid );
 }
 
 // Release names and links associées à ce projet visuel
@@ -69,13 +67,15 @@ if ( $thumb_id ) {
      PLEINE LARGEUR, aux mêmes bords que la grille d'images. -->
 <?php if ( ! empty( $gallery_ids ) ) : ?>
 <div class="container">
-    <?php if ( ! empty( $artist_names ) ) : ?>
+    <?php if ( ! empty( $artists_html ) ) : ?>
     <h2 class="visual-collection__by">
         <?php
+        // $artists_html contient des liens déjà échappés vers chaque fiche
+        // artiste : le nom du titre mène directement à la page de l'artiste.
         printf(
-            /* translators: %s : nom du ou des artistes de la collection. */
+            /* translators: %s : lien(s) vers le ou les artistes de la collection. */
             esc_html__( 'Collection by %s', 'mango-dragon' ),
-            esc_html( implode( ', ', $artist_names ) )
+            implode( ', ', $artists_html )
         );
         ?>
     </h2>
@@ -134,13 +134,6 @@ if ( $thumb_id ) {
 <section class="single-content-layout section">
     <div class="container">
         <div class="content-text">
-            <?php if ( ! empty( $artists_html ) ) : ?>
-            <div class="content-section">
-                <h2>Artistes</h2>
-                <p><?php echo implode( ', ', $artists_html ); ?></p>
-            </div>
-            <?php endif; ?>
-
             <?php if ( ! empty( $releases_html ) ) : ?>
             <div class="content-section">
                 <h2>Releases</h2>
