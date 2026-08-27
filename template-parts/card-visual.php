@@ -32,10 +32,16 @@ if ( ! empty( $artist_ids ) ) {
     }
     $artist_slugs = implode( ',', array_filter( $slugs ) );
 }
+
+// data-date : lue par le module de tri (Latest / Oldest). Les visuels n'ont pas
+// de date de sortie propre comme les releases — on utilise la date de
+// publication de la collection.
+$visual_date = get_the_date( 'Y-m-d', $visual );
 ?>
 <article class="card-visual"
     data-visual-type="<?php echo esc_attr( $type_slugs ); ?>"
-    data-artists="<?php echo esc_attr( $artist_slugs ); ?>">
+    data-artists="<?php echo esc_attr( $artist_slugs ); ?>"
+    data-date="<?php echo esc_attr( $visual_date ); ?>">
     <a href="<?php echo esc_url( get_permalink( $visual->ID ) ); ?>" data-ajax-link>
         <?php if ( $thumb ) : ?>
             <img src="<?php echo esc_url( $thumb ); ?>" alt="<?php echo esc_attr( $visual->post_title ); ?>" class="card-visual__image" loading="lazy" width="400" height="400">

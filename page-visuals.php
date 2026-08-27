@@ -51,6 +51,7 @@ $md_visuals = get_posts( [
 			'rows' => [
 				[ 'type' => 'artists',                               'label' => 'Artist', 'ids' => $md_vis_artist_ids ],
 				[ 'type' => 'taxonomy', 'taxonomy' => 'visual_type', 'label' => 'Type' ],
+				[ 'type' => 'sort',                                  'label' => 'Sort' ],
 			],
 		];
 		set_query_var( 'filter_config', $filter_config );
