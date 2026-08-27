@@ -1679,9 +1679,16 @@ body.lightbox-open {
 /* --- Vidéos artiste (mix, sets VJ) ------------------------------------------
    Les lecteurs viennent de youtube-nocookie.com : aucun cookie de suivi n'est
    déposé tant que le visiteur ne lance pas la lecture. */
-.single-videos .video-grid {
+/* Les vidéos occupent TOUTE la largeur du conteneur, une par ligne.
+
+   La grille précédente (auto-fit, minmax 340px) plaçait deux lecteurs côte à
+   côte dès qu'il y en avait plusieurs, réduisant chacun à la moitié de la
+   largeur. Une vidéo se regarde en grand : elle ne se comporte pas comme une
+   vignette de galerie. */
+.single-videos .video-grid,
+.visual-videos .video-stack {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+    grid-template-columns: 1fr;
     gap: var(--space-md);
 }
 

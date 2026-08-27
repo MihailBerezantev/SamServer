@@ -129,6 +129,35 @@ if ( $thumb_id ) {
 </div>
 <?php endif; ?>
 
+<!-- VIDÉOS DE LA COLLECTION : pleine largeur, une par ligne.
+     Rendues APRÈS la galerie et dans leur propre section : les insérer dans
+     .visual-collection__grid casserait la justification des rangées de photos,
+     qui répartit les vignettes selon leur ratio. -->
+<?php
+$md_visual_videos = function_exists( 'md_youtube_ids' ) && function_exists( 'get_field' )
+    ? md_youtube_ids( (string) get_field( 'mdvis_videos', $visual_id ) )
+    : [];
+if ( $md_visual_videos ) :
+?>
+<section class="visual-videos section">
+    <div class="container">
+        <div class="video-stack">
+            <?php foreach ( $md_visual_videos as $md_vid ) : ?>
+            <div class="video-embed">
+                <iframe
+                    src="<?php echo esc_url( md_youtube_embed_url( $md_vid ) ); ?>"
+                    title="<?php echo esc_attr( sprintf( 'Vidéo de %s', get_the_title( $visual_id ) ) ); ?>"
+                    loading="lazy"
+                    allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    referrerpolicy="strict-origin-when-cross-origin"
+                    allowfullscreen></iframe>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</section>
+<?php endif; ?>
+
 <!-- DÉTAILS (EN BAS) : Artistes / Releases / Type
      (la couverture est dans la galerie, la description est passée sous le titre) -->
 <section class="single-content-layout section">

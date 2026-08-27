@@ -51,3 +51,58 @@ function md_youtube_ids( $text ) {
 function md_youtube_embed_url( $id ) {
     return 'https://www.youtube-nocookie.com/embed/' . rawurlencode( $id );
 }
+
+/**
+ * Ajoute le champ « Vidéos YouTube » aux groupes ACF existants.
+ *
+ * md_acf_seed_groups() n'importe md_acf_group_definitions() qu'UNE SEULE FOIS,
+ * protégé par l'option md_acf_seeded. Passée cette amorce, ACF gère les groupes
+ * depuis sa propre interface : ajouter un champ à la définition PHP n'a plus
+ * aucun effet et le champ reste invisible dans le back-office.
+ *
+ * On passe donc par le filtre acf/load_fields, qui AJOUTE le champ à la liste
+ * déjà chargée. À ne surtout pas remplacer par acf_add_local_field() avec un
+ * 'parent' : ACF considère alors le groupe comme local et sert uniquement les
+ * champs déclarés en PHP, faisant disparaître la biographie, les liens sociaux
+ * et la description de l'interface.
+ *
+ * @param array $fields Champs déjà chargés pour le groupe.
+ * @param array $parent Le groupe en cours de chargement.
+ * @return array
+ */
+add_filter( 'acf/load_fields', 'md_append_video_field', 10, 2 );
+function md_append_video_field( $fields, $parent ) {
+    $cibles = [
+        'group_md_artiste'     => [ 'key' => 'field_md_videos',    'name' => 'mdacf_videos' ],
+        'group_md_visual_item' => [ 'key' => 'field_mdvis_videos', 'name' => 'mdvis_videos' ],
+    ];
+
+    $cle = isset( $parent['key'] ) ? $parent['key'] : '';
+    if ( ! isset( $cibles[ $cle ] ) ) {
+        return $fields;
+    }
+
+    // Déjà présent (groupe modifié depuis l'interface) : on ne double pas.
+    foreach ( (array) $fields as $f ) {
+        if ( isset( $f['name'] ) && $f['name'] === $cibles[ $cle ]['name'] ) {
+            return $fields;
+        }
+    }
+
+    $fields[] = [
+        'ID'           => 0,
+        'key'          => $cibles[ $cle ]['key'],
+        'name'         => $cibles[ $cle ]['name'],
+        'label'        => 'Vidéos YouTube',
+        'type'         => 'textarea',
+        'rows'         => 4,
+        // Pas de wpautop : le contenu est une liste d'URL, pas de la prose.
+        'new_lines'    => '',
+        'instructions' => 'Une URL par ligne. Formats acceptés : youtube.com/watch?v=…, youtu.be/…, /shorts/…',
+        'required'     => 0,
+        'parent'       => $cle,
+        'menu_order'   => 99,
+    ];
+
+    return $fields;
+}
