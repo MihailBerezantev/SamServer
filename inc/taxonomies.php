@@ -123,3 +123,54 @@ function md_seed_visual_types() {
     update_option( 'md_visual_types_seeded', 1 );
 }
 add_action( 'init', 'md_seed_visual_types', 20 );
+
+/**
+ * Slugs des types de release auxquels un artiste a participé.
+ *
+ * La page Artists filtre les artistes par type de release (EP, Mix…), une
+ * donnée qui n'existe pas sur l'artiste : elle vit sur ses releases, reliées
+ * par la méta _md_artist_ids. Interroger les releases carte par carte ferait
+ * une requête par artiste ; la table est donc construite une seule fois par
+ * requête HTTP puis servie depuis un cache statique.
+ *
+ * @param int $artist_id
+ * @return string[] Slugs de termes release_type, sans doublon.
+ */
+function md_artist_release_type_slugs( $artist_id ) {
+    static $map = null;
+
+    if ( null === $map ) {
+        $map = [];
+
+        $releases = get_posts( [
+            'post_type'      => 'release',
+            'post_status'    => 'publish',
+            'posts_per_page' => -1,
+            'fields'         => 'ids',
+        ] );
+
+        foreach ( $releases as $release_id ) {
+            $types = get_the_terms( $release_id, 'release_type' );
+            if ( ! is_array( $types ) ) {
+                continue;
+            }
+            $slugs = wp_list_pluck( $types, 'slug' );
+
+            $artist_ids = get_post_meta( $release_id, '_md_artist_ids', true );
+            if ( ! is_array( $artist_ids ) ) {
+                continue;
+            }
+
+            foreach ( $artist_ids as $aid ) {
+                $aid = (int) $aid;
+                $map[ $aid ] = array_merge( $map[ $aid ] ?? [], $slugs );
+            }
+        }
+
+        foreach ( $map as $aid => $slugs ) {
+            $map[ $aid ] = array_values( array_unique( $slugs ) );
+        }
+    }
+
+    return $map[ (int) $artist_id ] ?? [];
+}

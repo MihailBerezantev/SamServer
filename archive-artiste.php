@@ -17,9 +17,14 @@ $artistes = get_posts( [
 <section class="section">
     <div class="container">
         <?php
+        // Ordre d'affichage des lignes de filtres : Genre, Artist, Type.
+        // « Type » = type de release (EP, Mix…), pas artist_type.
         $filter_config = [
-            'taxonomies'   => [ 'genre', 'artist_type' ],
-            'show_artists' => false,
+            'rows' => [
+                [ 'type' => 'taxonomy', 'taxonomy' => 'genre',        'label' => 'Genre' ],
+                [ 'type' => 'artists',                                'label' => 'Artist' ],
+                [ 'type' => 'taxonomy', 'taxonomy' => 'release_type', 'label' => 'Type' ],
+            ],
         ];
         set_query_var( 'filter_config', $filter_config );
         get_template_part( 'template-parts/filter', 'bar' );

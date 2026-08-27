@@ -15,9 +15,17 @@ $genres = get_the_terms( $artiste->ID, 'genre' );
 $types  = get_the_terms( $artiste->ID, 'artist_type' );
 $genre_slugs = $genres ? implode( ',', wp_list_pluck( $genres, 'slug' ) ) : '';
 $type_slugs  = $types ? implode( ',', wp_list_pluck( $types, 'slug' ) ) : '';
+
+// data-artists : son propre slug, pour la ligne de filtre « Artist ».
+// data-release-type : les types de ses releases (EP, Mix…), donnée qui vit sur
+// les releases et non sur l'artiste — voir md_artist_release_type_slugs().
+$artist_slug        = $artiste->post_name;
+$release_type_slugs = implode( ',', md_artist_release_type_slugs( $artiste->ID ) );
 ?>
 <article class="card-artiste"
     data-genres="<?php echo esc_attr( $genre_slugs ); ?>"
+    data-artists="<?php echo esc_attr( $artist_slug ); ?>"
+    data-release-type="<?php echo esc_attr( $release_type_slugs ); ?>"
     data-type="<?php echo esc_attr( $type_slugs ); ?>">
     <a href="<?php echo esc_url( get_permalink( $artiste->ID ) ); ?>" data-ajax-link>
         <?php if ( $thumb ) : ?>
