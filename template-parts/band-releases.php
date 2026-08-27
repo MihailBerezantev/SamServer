@@ -18,7 +18,6 @@ if ( empty( $releases ) ) {
 $releases_loop = array_merge( $releases, $releases, $releases, $releases );
 ?>
 <section class="scroll-band" aria-label="Recent releases">
-    <button class="band-arrow band-arrow--left" aria-label="Scroll left">&#9664;</button>
     <div class="band-track band-track--ltr">
         <?php foreach ( $releases_loop as $release ) :
             $thumb = get_the_post_thumbnail_url( $release->ID, 'release-card' );
@@ -44,5 +43,4 @@ $releases_loop = array_merge( $releases, $releases, $releases, $releases );
         </a>
         <?php endforeach; ?>
     </div>
-    <button class="band-arrow band-arrow--right" aria-label="Scroll right">&#9654;</button>
 </section>

@@ -18,7 +18,6 @@ if ( empty( $artistes ) ) {
 $artistes_loop = array_merge( $artistes, $artistes, $artistes, $artistes );
 ?>
 <section class="scroll-band" aria-label="Artists">
-    <button class="band-arrow band-arrow--left" aria-label="Scroll left">&#9664;</button>
     <div class="band-track band-track--rtl">
         <?php foreach ( $artistes_loop as $artiste ) :
             $thumb = get_the_post_thumbnail_url( $artiste->ID, 'band-photo' );
@@ -44,5 +43,4 @@ $artistes_loop = array_merge( $artistes, $artistes, $artistes, $artistes );
         </a>
         <?php endforeach; ?>
     </div>
-    <button class="band-arrow band-arrow--right" aria-label="Scroll right">&#9654;</button>
 </section>

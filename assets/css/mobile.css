@@ -122,7 +122,6 @@ body {
     .player-btn,
     .release-tracklist__queue-btn,
     .social-link,
-    .band-arrow,
     .queue-clear,
     .slider-arrow {
         position: relative;
@@ -130,7 +129,6 @@ body {
     .player-btn::after,
     .release-tracklist__queue-btn::after,
     .social-link::after,
-    .band-arrow::after,
     .queue-clear::after,
     .slider-arrow::after {
         content: '';

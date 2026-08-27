@@ -42,7 +42,6 @@ $studio_url  = home_url( '/studio/' );
 $photos_loop = array_merge( $photos, $photos, $photos, $photos );
 ?>
 <section class="scroll-band" aria-label="Studio photos">
-    <button class="band-arrow band-arrow--left" aria-label="Scroll left">&#9664;</button>
     <div class="band-track band-track--rtl">
         <?php foreach ( $photos_loop as $photo ) : ?>
         <a href="<?php echo esc_url( $studio_url ); ?>" class="band-item band-item--photo" data-ajax-link>
@@ -56,5 +55,4 @@ $photos_loop = array_merge( $photos, $photos, $photos, $photos );
         </a>
         <?php endforeach; ?>
     </div>
-    <button class="band-arrow band-arrow--right" aria-label="Scroll right">&#9654;</button>
 </section>
