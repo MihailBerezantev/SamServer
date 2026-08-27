@@ -16,9 +16,11 @@ $release_ids = is_array( $release_ids ) ? $release_ids : [];
 $visual_types = get_the_terms( $visual_id, 'visual_type' );
 
 // Artist names and links (même pattern que single-release.php)
-$artists_html = [];
+$artists_html  = [];
+$artist_names  = [];
 foreach ( $artist_ids as $aid ) {
     $artists_html[] = '<a href="' . esc_url( get_permalink( $aid ) ) . '" data-ajax-link>' . esc_html( get_the_title( $aid ) ) . '</a>';
+    $artist_names[] = get_the_title( $aid );
 }
 
 // Release names and links associées à ce projet visuel
@@ -58,13 +60,28 @@ if ( $thumb_id ) {
     <div class="container container--narrow">
         <div class="visual-intro__text"><?php echo wp_kses_post( wpautop( $description ) ); ?></div>
     </div>
-    <?php if ( ! empty( $gallery_ids ) ) : ?>
-    <?php // Trait dans un conteneur PLEINE LARGEUR (mêmes bords que la grille d'images). ?>
-    <div class="container">
-        <hr class="visual-intro__rule">
-    </div>
-    <?php endif; ?>
 </section>
+<?php endif; ?>
+
+<!-- TITRE DE LA COLLECTION : « Collection by <artiste> », puis le trait qui
+     ouvre la grille. Rendu indépendamment de la description, pour rester
+     présent sur un visuel qui n'en a pas. Le trait est dans un conteneur
+     PLEINE LARGEUR, aux mêmes bords que la grille d'images. -->
+<?php if ( ! empty( $gallery_ids ) ) : ?>
+<div class="container">
+    <?php if ( ! empty( $artist_names ) ) : ?>
+    <h2 class="visual-collection__by">
+        <?php
+        printf(
+            /* translators: %s : nom du ou des artistes de la collection. */
+            esc_html__( 'Collection by %s', 'mango-dragon' ),
+            esc_html( implode( ', ', $artist_names ) )
+        );
+        ?>
+    </h2>
+    <?php endif; ?>
+    <hr class="visual-intro__rule">
+</div>
 <?php endif; ?>
 
 <!-- COLLECTION (EN HAUT) : image de couverture incluse en 1re position, photos cliquables en grand -->
