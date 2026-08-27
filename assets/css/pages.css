@@ -1519,15 +1519,14 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 .visual-collection__by a {
     color: var(--color-text-muted);
     text-decoration: none;
-    text-decoration-thickness: 2px;
-    text-underline-offset: 0.12em;
-    transition: text-decoration-color var(--transition-fast);
+    transition: color var(--transition-fast);
 }
 
-.visual-collection__by a:hover,
-.visual-collection__by a:focus-visible {
-    text-decoration: underline;
-    text-decoration-color: currentColor;
+/* Le survol assombrit le nom : sans soulignement, c'est le seul retour visuel
+   qui confirme que l'élément réagit au pointeur. Le contour de focus par
+   défaut du navigateur est conservé pour la navigation au clavier. */
+.visual-collection__by a:hover {
+    color: var(--color-text);
 }
 
 .visual-intro__rule {
