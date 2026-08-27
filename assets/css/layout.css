@@ -15,19 +15,23 @@
     max-width: 900px;
 }
 
-/* --- Section spacing --- */
-.section {
-    padding-top: var(--space-xl);
-    padding-bottom: 0;
+/* --- Section spacing (uniform 20px) --- */
+section {
+    padding-top: 00px;
+    padding-bottom: 20px;
+}
+section.page-header {
+    padding-top: 00px;
+    padding-bottom: 00px;
 }
 
 .section + .section {
-    padding-top: var(--space-sm);
+    padding-top: 00px;
 }
 
 .section--tight {
-    padding-top: var(--space-xl);
-    padding-bottom: 0;
+    padding-top: 00px;
+    padding-bottom: 00px;
 }
 
 /* --- Cards Grid --- */
@@ -53,7 +57,7 @@
 .two-col {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: var(--space-xl);
+    gap: 20px;
     align-items: start;
 }
 
@@ -118,11 +122,8 @@
 
 /* --- Flush content against navbar and footer --- */
 .site-content > *:first-child {
-    padding-top: 0;
     margin-top: 0;
 }
-
 .site-content > *:last-child {
-    padding-bottom: 0;
-    margin-bottom: 0;
+    margin-bottom: 0px;  /* Espacement avant le footer */
 }

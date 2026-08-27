@@ -13,7 +13,7 @@ get_header();
             <?php the_excerpt(); ?>
         </article>
     <?php endwhile; else : ?>
-        <p>Aucun contenu trouvé.</p>
+        <p>No content found.</p>
     <?php endif; ?>
 </div>
 

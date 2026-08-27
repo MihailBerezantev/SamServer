@@ -27,7 +27,7 @@ $type_slugs  = $types ? implode( ',', wp_list_pluck( $types, 'slug' ) ) : '';
         <?php endif; ?>
         <div class="card-artiste__overlay">
             <span class="card-artiste__name"><?php echo esc_html( $artiste->post_title ); ?></span>
-            <span class="card-artiste__cta">Voir le profil</span>
+            <span class="card-artiste__cta">View profile</span>
         </div>
     </a>
 </article>

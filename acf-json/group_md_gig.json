@@ -1,0 +1,112 @@
+{
+    "key": "group_md_gig",
+    "title": "Détails du concert",
+    "fields": [
+        {
+            "key": "field_gig_date",
+            "label": "Date",
+            "name": "gig_date",
+            "aria-label": "",
+            "type": "date_picker",
+            "instructions": "Le tri À venir \/ Passés se fait automatiquement selon cette date.",
+            "required": 1,
+            "conditional_logic": false,
+            "wrapper": {
+                "width": "",
+                "class": "",
+                "id": ""
+            },
+            "display_format": "d\/m\/Y",
+            "return_format": "Y-m-d",
+            "first_day": 1,
+            "default_to_current_date": 0
+        },
+        {
+            "key": "field_gig_city",
+            "label": "Lieu",
+            "name": "gig_city",
+            "aria-label": "",
+            "type": "text",
+            "instructions": "",
+            "required": 0,
+            "conditional_logic": 0,
+            "wrapper": {
+                "width": "",
+                "class": "",
+                "id": ""
+            },
+            "default_value": "",
+            "maxlength": "",
+            "allow_in_bindings": 1,
+            "placeholder": "Lieu, Ville, Pays",
+            "prepend": "",
+            "append": ""
+        },
+        {
+            "key": "field_gig_url",
+            "label": "Lien (billets \/ infos)",
+            "name": "gig_url",
+            "aria-label": "",
+            "type": "url",
+            "instructions": "",
+            "required": false,
+            "conditional_logic": false,
+            "wrapper": {
+                "width": "",
+                "class": "",
+                "id": ""
+            },
+            "default_value": "",
+            "placeholder": ""
+        },
+        {
+            "key": "field_gig_artists",
+            "label": "Artiste(s)",
+            "name": "gig_artists",
+            "aria-label": "",
+            "type": "relationship",
+            "instructions": "Le(s) artiste(s) sur la fiche desquels ce concert apparaîtra.",
+            "required": 1,
+            "conditional_logic": false,
+            "wrapper": {
+                "width": "",
+                "class": "",
+                "id": ""
+            },
+            "post_type": [
+                "artiste"
+            ],
+            "filters": [
+                "search"
+            ],
+            "return_format": "id",
+            "taxonomy": [],
+            "min": 0,
+            "max": 0,
+            "elements": [],
+            "bidirectional_target": []
+        }
+    ],
+    "location": [
+        [
+            {
+                "param": "post_type",
+                "operator": "==",
+                "value": "gig"
+            }
+        ]
+    ],
+    "menu_order": 0,
+    "position": "normal",
+    "style": "default",
+    "label_placement": "top",
+    "instruction_placement": "label",
+    "hide_on_screen": "",
+    "active": true,
+    "description": "",
+    "show_in_rest": 0,
+    "display_title": "",
+    "allow_ai_access": false,
+    "ai_description": "",
+    "modified": 1787212185
+}

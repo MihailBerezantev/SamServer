@@ -12,6 +12,7 @@ function md_register_taxonomies() {
     // ======================================================================
     // Genre (shared between artiste & release)
     // ======================================================================
+    if ( ! md_cptui_owns_taxonomy( 'genre' ) )
     register_taxonomy( 'genre', [ 'artiste', 'release' ], [
         'labels' => [
             'name'          => 'Genres',
@@ -33,6 +34,7 @@ function md_register_taxonomies() {
     // ======================================================================
     // Type de release (Album, EP, Single, Compilation)
     // ======================================================================
+    if ( ! md_cptui_owns_taxonomy( 'release_type' ) )
     register_taxonomy( 'release_type', [ 'release' ], [
         'labels' => [
             'name'          => 'Types de release',
@@ -54,6 +56,7 @@ function md_register_taxonomies() {
     // ======================================================================
     // Type d'artiste (Musical, Visual)
     // ======================================================================
+    if ( ! md_cptui_owns_taxonomy( 'artist_type' ) )
     register_taxonomy( 'artist_type', [ 'artiste' ], [
         'labels' => [
             'name'          => 'Types d\'artiste',

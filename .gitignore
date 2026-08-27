@@ -1,0 +1,29 @@
+# --- OS ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Éditeurs ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# --- Logs & debug WordPress ---
+*.log
+error_log
+debug.log
+
+# --- Sauvegardes ---
+*.bak
+*.orig
+*.rej
+*.tmp
+
+# --- Dépendances (aucune aujourd'hui : pas de build tools) ---
+node_modules/
+vendor/
+
+# NOTE : acf-json/ est volontairement versionné.
+# C'est la définition des champs ACF, elle doit suivre le code.

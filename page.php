@@ -3,6 +3,7 @@
  * Template: Generic Page — fallback for pages without a dedicated template
  */
 get_header();
+get_template_part( 'template-parts/page-header' );
 ?>
 
 <section class="section">
@@ -11,7 +12,6 @@ get_header();
         if ( have_posts() ) :
             while ( have_posts() ) : the_post();
                 ?>
-                <h1 class="page-title"><?php the_title(); ?></h1>
                 <div class="page-content">
                     <?php the_content(); ?>
                 </div>
@@ -23,3 +23,4 @@ get_header();
 </section>
 
 <?php get_footer(); ?>
+

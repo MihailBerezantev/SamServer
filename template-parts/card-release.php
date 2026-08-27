@@ -32,11 +32,19 @@ foreach ( $artist_ids as $aid ) {
     $artist_names[] = get_the_title( $aid );
 }
 $artist_display = ! empty( $artist_names ) ? implode( ', ', $artist_names ) : '';
+
+// Date de sortie (ISO Y-m-d) pour le tri client-side. Repli sur la date de
+// publication si la release n'a pas de date de sortie renseignée.
+$release_date = get_post_meta( $release->ID, '_md_release_date', true );
+if ( empty( $release_date ) ) {
+    $release_date = get_the_date( 'Y-m-d', $release );
+}
 ?>
 <article class="card-release"
     data-genres="<?php echo esc_attr( $genre_slugs ); ?>"
     data-release-type="<?php echo esc_attr( $type_slugs ); ?>"
-    data-artists="<?php echo esc_attr( $artist_slugs ); ?>">
+    data-artists="<?php echo esc_attr( $artist_slugs ); ?>"
+    data-date="<?php echo esc_attr( $release_date ); ?>">
     <a href="<?php echo esc_url( get_permalink( $release->ID ) ); ?>" data-ajax-link>
         <?php if ( $thumb ) : ?>
             <img src="<?php echo esc_url( $thumb ); ?>" alt="<?php echo esc_attr( $release->post_title ); ?>" class="card-release__image" loading="lazy" width="400" height="400">

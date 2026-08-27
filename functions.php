@@ -1,13 +1,13 @@
-<?php
+﻿<?php
 /**
- * Mango Dragon International — Theme Functions
+ * Mango Dragon International â€” Theme Functions
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'MD_VERSION', '1.0.0' );
+define( 'MD_VERSION', '4.9.2' );
 define( 'MD_DIR', get_template_directory() );
 define( 'MD_URI', get_template_directory_uri() );
 
@@ -16,8 +16,15 @@ define( 'MD_URI', get_template_directory_uri() );
 // ==========================================================================
 require_once MD_DIR . '/inc/post-types.php';
 require_once MD_DIR . '/inc/taxonomies.php';
+require_once MD_DIR . '/inc/cpt-ui-compat.php'; // CPT UI: empÃªche la redÃ©claration des CPT/taxonomies du thÃ¨me
 require_once MD_DIR . '/inc/meta-boxes.php';
+require_once MD_DIR . '/inc/acf-fields.php';   // ACF: groupes de champs + masquage des meta-boxes natives
+require_once MD_DIR . '/inc/acf-compat.php';   // ACF: pont vers les clÃ©s _md_* lues par les templates
+require_once MD_DIR . '/inc/render-fields.php'; // ACF: rendu gÃ©nÃ©rique des champs supplÃ©mentaires
+require_once MD_DIR . '/inc/visual-gallery.php'; // Visuals: collection de photos (mÃ©diathÃ¨que)
+require_once MD_DIR . '/inc/submissions.php';   // stockage des demandes reÃ§ues (CPT md_submission)
 require_once MD_DIR . '/inc/ajax-handlers.php';
+require_once MD_DIR . '/inc/inbox.php';         // BoÃ®te de rÃ©ception (wp-admin > E-mails)
 require_once MD_DIR . '/inc/blocks.php';
 require_once MD_DIR . '/inc/test-data.php';
 
@@ -56,13 +63,50 @@ function md_setup() {
         'footer'  => __( 'Menu footer', 'mango-dragon' ),
     ] );
 
-    // Custom image sizes
-    add_image_size( 'artist-card', 400, 500, [ 'center', 'top' ] );
-    add_image_size( 'release-card', 400, 400, true );
+    // Custom image sizes â€” dimensionnÃ©es pour rester nettes sur grand Ã©cran (retina).
+    // Les cartes de grille s'affichent ~250-400px : une source 600-750px Ã©vite la pixelisation.
+    add_image_size( 'artist-card', 600, 750, [ 'center', 'top' ] );
+    add_image_size( 'release-card', 600, 600, true );
     add_image_size( 'band-photo', 300, 300, [ 'center', 'top' ] );
     add_image_size( 'hero-large', 1200, 800, true );
+    add_image_size( 'studio-slide', 1200, 500, true ); // carrousel Services (page Studio)
 }
 add_action( 'after_setup_theme', 'md_setup' );
+
+// QualitÃ© de compression des images gÃ©nÃ©rÃ©es (dÃ©faut WP = 82). 85 = un peu plus net,
+// impact minime sur le poids / la vitesse.
+add_filter( 'wp_editor_set_quality', function () { return 85; } );
+
+// ==========================================================================
+// E-mails â€” expÃ©diteur valide (dÃ©livrabilitÃ©)
+// Le serveur rejette l'expÃ©diteur d'enveloppe par dÃ©faut (kr7kme_â€¦@<compte> â†’
+// Â« Sender address rejected: Domain not found Â»), ce qui empÃªchait TOUT envoi
+// (formulaire de contact inclus). On force le Return-Path et l'adresse From sur
+// le domaine â†’ e-mails acceptÃ©s et dÃ©livrÃ©s.
+// ==========================================================================
+add_action( 'phpmailer_init', function ( $phpmailer ) {
+    $phpmailer->Sender = 'contact@mango-dragon.com'; // Return-Path (enveloppe)
+} );
+add_filter( 'wp_mail_from', function () { return 'contact@mango-dragon.com'; } );
+add_filter( 'wp_mail_from_name', function () { return 'Site Mango Dragon'; } );
+
+// ==========================================================================
+// Admin: Enqueue media library for Release editor
+// ==========================================================================
+function md_admin_enqueue_media( $hook ) {
+    if ( ! in_array( $hook, [ 'post.php', 'post-new.php' ], true ) ) {
+        return;
+    }
+    $pt = get_post_type();
+    if ( 'release' === $pt ) {
+        wp_enqueue_media();
+    }
+    if ( 'visual' === $pt ) {
+        wp_enqueue_media();                        // sÃ©lecteur mÃ©diathÃ¨que
+        wp_enqueue_script( 'jquery-ui-sortable' ); // rÃ©ordonnancement des photos
+    }
+}
+add_action( 'admin_enqueue_scripts', 'md_admin_enqueue_media' );
 
 // ==========================================================================
 // Enqueue Styles & Scripts
@@ -77,16 +121,17 @@ function md_enqueue_assets() {
     );
 
     // Theme CSS
-    $css_files = [ 'variables', 'base', 'layout', 'navbar', 'components', 'bands', 'player', 'pages' ];
+    // 'mobile' EN DERNIER : standard mobile, doit pouvoir corriger les autres feuilles.
+    $css_files = [ 'variables', 'base', 'layout', 'navbar', 'components', 'bands', 'player', 'pages', 'mobile' ];
     foreach ( $css_files as $file ) {
         wp_enqueue_style( "md-{$file}", MD_URI . "/assets/css/{$file}.css", [], MD_VERSION );
     }
 
-    // Main stylesheet (style.css — mostly just theme header)
+    // Main stylesheet (style.css â€” mostly just theme header)
     wp_enqueue_style( 'md-style', get_stylesheet_uri(), [], MD_VERSION );
 
     // Theme JS
-    $js_files = [ 'theme-toggle', 'player', 'bands', 'filters', 'forms', 'app' ];
+    $js_files = [ 'theme-toggle', 'player', 'bands', 'filters', 'lightbox', 'forms', 'app' ];
     foreach ( $js_files as $file ) {
         wp_enqueue_script( "md-{$file}", MD_URI . "/assets/js/{$file}.js", [], MD_VERSION, true );
     }
@@ -97,6 +142,11 @@ function md_enqueue_assets() {
         'siteUrl' => home_url( '/' ),
         'themeUrl' => MD_URI,
         'nonce'   => wp_create_nonce( 'md_ajax_nonce' ),
+    ] );
+
+    // Pass global track list to player.js for random-play-on-empty-queue
+    wp_localize_script( 'md-player', 'mdPlayerData', [
+        'tracks' => md_get_all_tracks_for_player(),
     ] );
 
     // Pass band settings to bands.js
@@ -119,6 +169,59 @@ function md_enqueue_assets() {
     ] );
 }
 add_action( 'wp_enqueue_scripts', 'md_enqueue_assets' );
+
+// ==========================================================================
+// Global track list for JS random play
+// ==========================================================================
+
+function md_get_all_tracks_for_player() {
+    $tracks = [];
+
+    $query = new WP_Query( [
+        'post_type'      => 'release',
+        'post_status'    => 'publish',
+        'posts_per_page' => -1,
+        'fields'         => 'ids',
+        'no_found_rows'  => true,
+    ] );
+
+    foreach ( $query->posts as $release_id ) {
+        $tracklist  = get_post_meta( $release_id, '_md_tracklist', true );
+        $artist_ids = get_post_meta( $release_id, '_md_artist_ids', true );
+        // Vignette du lecteur : affichÃ©e en petit â†’ 'medium' (300px) suffit, plus lÃ©ger.
+        $artwork    = get_the_post_thumbnail_url( $release_id, 'medium' );
+        $artwork    = $artwork ? $artwork : '';
+
+        if ( ! empty( $artist_ids ) && is_array( $artist_ids ) ) {
+            $artist_names = array_filter( array_map( 'get_the_title', $artist_ids ) );
+            $artist       = implode( ', ', $artist_names );
+        } else {
+            $artist = get_the_title( $release_id );
+        }
+        if ( ! $artist ) {
+            $artist = get_the_title( $release_id );
+        }
+
+        if ( empty( $tracklist ) || ! is_array( $tracklist ) ) {
+            continue;
+        }
+
+        foreach ( $tracklist as $t ) {
+            if ( empty( $t['audioUrl'] ) ) {
+                continue;
+            }
+            $tracks[] = [
+                'title'    => isset( $t['title'] )    ? sanitize_text_field( $t['title'] )    : '',
+                'artist'   => sanitize_text_field( $artist ),
+                'audioUrl' => esc_url_raw( $t['audioUrl'] ),
+                'artwork'  => esc_url_raw( $artwork ),
+                'duration' => isset( $t['duration'] ) ? sanitize_text_field( $t['duration'] ) : '',
+            ];
+        }
+    }
+
+    return $tracks;
+}
 
 // ==========================================================================
 // Fallback Menu (when no menu is assigned in WP Admin)
@@ -172,7 +275,7 @@ function md_excerpt_length( $length ) {
 add_filter( 'excerpt_length', 'md_excerpt_length' );
 
 // ==========================================================================
-// Customizer — Background color controls
+// Customizer â€” Background color controls
 // ==========================================================================
 function md_customize_register( $wp_customize ) {
     $wp_customize->add_section( 'md_colors', [
@@ -181,17 +284,17 @@ function md_customize_register( $wp_customize ) {
     ] );
 
     // ------------------------------------------------------------------
-    // Section: Bandes défilantes
+    // Section: Bandes dÃ©filantes
     // ------------------------------------------------------------------
     $wp_customize->add_section( 'md_bands', [
-        'title'    => __( 'Bandes défilantes', 'mango-dragon' ),
+        'title'    => __( 'Bandes dÃ©filantes', 'mango-dragon' ),
         'priority' => 31,
     ] );
 
     $band_defaults = [
-        1 => [ 'label' => 'Bande 1 — Artistes', 'speed' => 80,  'width' => 440, 'height' => 330 ],
-        2 => [ 'label' => 'Bande 2 — Releases', 'speed' => 80,  'width' => 320, 'height' => 320 ],
-        3 => [ 'label' => 'Bande 3 — Photos',   'speed' => 50,  'width' => 440, 'height' => 330 ],
+        1 => [ 'label' => 'Bande 1 â€” Artistes', 'speed' => 80,  'width' => 440, 'height' => 330 ],
+        2 => [ 'label' => 'Bande 2 â€” Releases', 'speed' => 80,  'width' => 320, 'height' => 320 ],
+        3 => [ 'label' => 'Bande 3 â€” Photos',   'speed' => 50,  'width' => 440, 'height' => 330 ],
     ];
 
     foreach ( $band_defaults as $n => $d ) {
@@ -202,7 +305,7 @@ function md_customize_register( $wp_customize ) {
             'transport'         => 'postMessage',
         ] );
         $wp_customize->add_control( "md_band{$n}_speed", [
-            'label'       => $d['label'] . ' — Vitesse (px/s)',
+            'label'       => $d['label'] . ' â€” Vitesse (px/s)',
             'description' => __( 'Plus la valeur est grande, plus la bande va vite.', 'mango-dragon' ),
             'section'     => 'md_bands',
             'type'        => 'range',
@@ -215,7 +318,7 @@ function md_customize_register( $wp_customize ) {
             'transport'         => 'postMessage',
         ] );
         $wp_customize->add_control( "md_band{$n}_width", [
-            'label'       => $d['label'] . ' — Largeur items (px)',
+            'label'       => $d['label'] . ' â€” Largeur items (px)',
             'section'     => 'md_bands',
             'type'        => 'range',
             'input_attrs' => [ 'min' => 100, 'max' => 800, 'step' => 10 ],
@@ -227,7 +330,7 @@ function md_customize_register( $wp_customize ) {
             'transport'         => 'postMessage',
         ] );
         $wp_customize->add_control( "md_band{$n}_height", [
-            'label'       => $d['label'] . ' — Hauteur items (px)',
+            'label'       => $d['label'] . ' â€” Hauteur items (px)',
             'section'     => 'md_bands',
             'type'        => 'range',
             'input_attrs' => [ 'min' => 100, 'max' => 800, 'step' => 10 ],
@@ -241,7 +344,7 @@ function md_customize_register( $wp_customize ) {
         'transport'         => 'postMessage',
     ] );
     $wp_customize->add_control( new WP_Customize_Color_Control( $wp_customize, 'md_bg_bright', [
-        'label'   => __( 'Fond — Mode clair', 'mango-dragon' ),
+        'label'   => __( 'Fond â€” Mode clair', 'mango-dragon' ),
         'section' => 'md_colors',
     ] ) );
 
@@ -252,7 +355,7 @@ function md_customize_register( $wp_customize ) {
         'transport'         => 'postMessage',
     ] );
     $wp_customize->add_control( new WP_Customize_Color_Control( $wp_customize, 'md_bg_dark', [
-        'label'   => __( 'Fond — Mode sombre', 'mango-dragon' ),
+        'label'   => __( 'Fond â€” Mode sombre', 'mango-dragon' ),
         'section' => 'md_colors',
     ] ) );
 }

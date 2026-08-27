@@ -65,8 +65,8 @@
 }
 
 .band-item--photo {
-    width: var(--band3-item-w, 440px);
-    height: var(--band3-item-h, 330px);
+    width: var(--band3-item-w, 360px);
+    height: var(--band3-item-h, 240px);
 }
 
 .band-item img {

@@ -57,6 +57,9 @@
     state.currentIndex = idx;
     var t = state.queue[idx];
     audio.src = t.audioUrl;
+    els.currentTime.textContent  = '0:00';
+    els.duration.textContent     = t.duration || '0:00';
+    els.progressFill.style.width = '0%';
     els.title.textContent   = t.title  || '\u2014';
     els.artist.textContent  = t.artist || '\u2014';
     if (t.artwork) { els.artworkImg.src = t.artwork; els.artworkImg.alt = t.title; }
@@ -66,7 +69,19 @@
 
   function play()  { if (!audio.src) return; audio.play().then(function(){ state.isPlaying=true; updatePlayIcon(); }).catch(function(){}); }
   function pause() { audio.pause(); state.isPlaying=false; updatePlayIcon(); }
-  function togglePlay() { state.isPlaying ? pause() : play(); }
+  function togglePlay() {
+    if (state.queue.length === 0) {
+      var allTracks = (window.mdPlayerData && window.mdPlayerData.tracks) ? window.mdPlayerData.tracks : [];
+      if (allTracks.length) {
+        var idx = Math.floor(Math.random() * allTracks.length);
+        state.queue = allTracks.slice();
+        loadTrack(idx);
+        play();
+      }
+      return;
+    }
+    state.isPlaying ? pause() : play();
+  }
 
   function nextTrack() {
     var n;
@@ -93,6 +108,16 @@
   }
 
   /* ---------- audio events ---------- */
+  audio.addEventListener('play', function () {
+    state.isPlaying = true;
+    updatePlayIcon();
+  });
+
+  audio.addEventListener('pause', function () {
+    state.isPlaying = false;
+    updatePlayIcon();
+  });
+
   audio.addEventListener('timeupdate', function () {
     if (!audio.duration) return;
     var pct = (audio.currentTime / audio.duration) * 100;
@@ -101,7 +126,11 @@
   });
 
   audio.addEventListener('loadedmetadata', function () {
-    els.duration.textContent = fmtTime(audio.duration);
+    /* Only use audio.duration as fallback if no PHP duration was provided */
+    var t = state.queue[state.currentIndex];
+    if (!t || !t.duration) {
+      els.duration.textContent = fmtTime(audio.duration);
+    }
   });
 
   audio.addEventListener('ended', function () {
@@ -184,9 +213,23 @@
 
   /* ---------- public API ---------- */
   window.mdPlayer = {
-    addToQueue: function (track) { state.queue.push(track); renderQueue(); },
+    addToQueue: function (track) {
+      state.queue.push(track);
+      renderQueue();
+      /* Make player bar visible so the user sees the queue */
+      playerBar.classList.add('player-bar--active');
+      /* Auto-start if player is completely idle */
+      if (!state.isPlaying && (state.currentIndex < 0 || !audio.src)) {
+        loadTrack(state.queue.length - 1);
+        play();
+      }
+      /* Open queue panel briefly to confirm */
+      els.queuePanel.setAttribute('aria-hidden', 'false');
+      els.queueBtn.setAttribute('aria-expanded', 'true');
+    },
     playTrack:  function (track) { state.queue.push(track); loadTrack(state.queue.length - 1); play(); },
     playAll:    function (tracks) { state.queue = tracks.slice(); if (state.queue.length) { loadTrack(0); play(); } },
+    playFrom:   function (tracks, index) { state.queue = tracks.slice(); loadTrack(index || 0); play(); },
     getState:   function () { return JSON.parse(JSON.stringify(state)); },
   };
 })();

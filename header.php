@@ -14,18 +14,18 @@
 
 <!-- Banner Logo — always visible at top -->
 <header class="site-header" id="site-header">
-    <a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="header-logo-link" aria-label="<?php esc_attr_e( 'Accueil', 'mango-dragon' ); ?>">
+    <a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="header-logo-link" aria-label="<?php esc_attr_e( 'Home', 'mango-dragon' ); ?>">
         <img
             src="<?php echo esc_url( MD_URI . '/assets/images/logo-banner.png' ); ?>"
             alt="Mango Dragon International"
             class="header-logo"
         >
     </a>
-    <p class="header-subtitle">Label audiovisuel associatif — Genève</p>
+    <p class="header-subtitle">Audiovisual Label — Geneva</p>
 </header>
 
 <!-- Navigation — centered below banner -->
-<nav class="main-nav" id="main-nav" role="navigation" aria-label="<?php esc_attr_e( 'Navigation principale', 'mango-dragon' ); ?>">
+<nav class="main-nav" id="main-nav" role="navigation" aria-label="<?php esc_attr_e( 'Main navigation', 'mango-dragon' ); ?>">
     <div class="nav-container">
         <?php
         wp_nav_menu( [
@@ -37,7 +37,7 @@
         ] );
         ?>
 
-        <button class="theme-toggle" id="theme-toggle" aria-label="<?php esc_attr_e( 'Changer le thème clair/sombre', 'mango-dragon' ); ?>">
+        <button class="theme-toggle" id="theme-toggle" aria-label="<?php esc_attr_e( 'Toggle light/dark theme', 'mango-dragon' ); ?>">
             <span class="theme-toggle-icon" aria-hidden="true"></span>
         </button>
 
@@ -48,7 +48,7 @@
 </nav>
 
 <!-- Mobile Menu Overlay -->
-<div class="mobile-menu-overlay" id="mobile-menu-overlay" aria-hidden="true" role="dialog" aria-label="Menu mobile">
+<div class="mobile-menu-overlay" id="mobile-menu-overlay" aria-hidden="true" role="dialog" aria-label="Mobile menu">
     <?php
     wp_nav_menu( [
         'theme_location' => 'primary',
@@ -58,7 +58,7 @@
         'depth'          => 1,
     ] );
     ?>
-    <button class="theme-toggle mobile-theme-toggle" aria-label="<?php esc_attr_e( 'Changer le thème clair/sombre', 'mango-dragon' ); ?>">
+    <button class="theme-toggle mobile-theme-toggle" aria-label="<?php esc_attr_e( 'Toggle light/dark theme', 'mango-dragon' ); ?>">
         <span class="theme-toggle-icon" aria-hidden="true"></span>
     </button>
 </div>

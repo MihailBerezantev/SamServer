@@ -3,20 +3,18 @@
  * Template: Archive — Releases / Discographie
  */
 get_header();
+set_query_var( 'page_title', 'Releases' );
+get_template_part( 'template-parts/page-header' );
 
+// Ordre serveur par défaut = plus récentes d'abord (repli sans JS).
+// Le tri interactif Latest / Oldest / Random est appliqué côté client (filters.js).
 $releases = get_posts( [
     'post_type'      => 'release',
     'posts_per_page' => -1,
-    'orderby'        => 'rand',
+    'orderby'        => 'date',
     'order'          => 'DESC',
 ] );
 ?>
-
-<section class="page-header section">
-    <div class="container">
-        <h1>Discographie</h1>
-    </div>
-</section>
 
 <section class="section">
     <div class="container">
@@ -24,6 +22,7 @@ $releases = get_posts( [
         $filter_config = [
             'taxonomies'   => [ 'genre', 'release_type' ],
             'show_artists' => true,
+            'show_sort'    => true,
         ];
         set_query_var( 'filter_config', $filter_config );
         get_template_part( 'template-parts/filter', 'bar' );
@@ -37,7 +36,7 @@ $releases = get_posts( [
             endforeach; ?>
         </div>
         <?php else : ?>
-        <p class="no-results">Aucune release pour le moment.</p>
+        <p class="no-results">No releases yet.</p>
         <?php endif; ?>
     </div>
 </section>

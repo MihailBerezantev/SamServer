@@ -14,6 +14,7 @@ function md_add_meta_boxes() {
     // Artiste meta boxes
     add_meta_box( 'md_artiste_details', 'Détails de l\'artiste', 'md_artiste_details_cb', 'artiste', 'normal', 'high' );
     add_meta_box( 'md_artiste_social', 'Liens sociaux', 'md_artiste_social_cb', 'artiste', 'normal', 'default' );
+    // Les « Gigs » sont désormais un CPT dédié (CPT UI + ACF), plus une meta-box native.
 
     // Release meta boxes
     add_meta_box( 'md_release_details', 'Détails de la release', 'md_release_details_cb', 'release', 'normal', 'high' );
@@ -130,6 +131,9 @@ function md_release_artists_cb( $post ) {
 // Release: Tracklist (dynamic repeater)
 // ==========================================================================
 function md_release_tracklist_cb( $post ) {
+    // Nonce propre à la tracklist : cette meta-box reste native même avec ACF actif,
+    // alors que la meta-box « Détails » (et son nonce) est retirée par ACF.
+    wp_nonce_field( 'md_release_tracklist_save', 'md_release_tracklist_nonce' );
     $tracklist = get_post_meta( $post->ID, '_md_tracklist', true );
     $tracklist = is_array( $tracklist ) ? $tracklist : [];
     ?>
@@ -151,7 +155,12 @@ function md_release_tracklist_cb( $post ) {
                         <td class="md-track-num"><?php echo intval( $i + 1 ); ?></td>
                         <td><input type="text" name="md_tracklist[<?php echo intval( $i ); ?>][title]" value="<?php echo esc_attr( $track['title'] ?? '' ); ?>" class="widefat" placeholder="Titre du morceau"></td>
                         <td><input type="text" name="md_tracklist[<?php echo intval( $i ); ?>][duration]" value="<?php echo esc_attr( $track['duration'] ?? '' ); ?>" class="widefat" placeholder="3:42"></td>
-                        <td><input type="url" name="md_tracklist[<?php echo intval( $i ); ?>][audioUrl]" value="<?php echo esc_url( $track['audioUrl'] ?? '' ); ?>" class="widefat" placeholder="https://..."></td>
+                        <td>
+                            <div style="display:flex;gap:4px;">
+                                <input type="url" name="md_tracklist[<?php echo intval( $i ); ?>][audioUrl]" value="<?php echo esc_url( $track['audioUrl'] ?? '' ); ?>" class="widefat md-audio-url" placeholder="https://...">
+                                <button type="button" class="button md-browse-audio" title="Parcourir la médiathèque">📁</button>
+                            </div>
+                        </td>
                         <td><button type="button" class="button md-remove-track" title="Supprimer">✕</button></td>
                     </tr>
                     <?php endforeach; ?>
@@ -186,7 +195,7 @@ function md_release_tracklist_cb( $post ) {
                 '<td class="md-track-num">' + (index + 1) + '</td>' +
                 '<td><input type="text" name="md_tracklist[' + index + '][title]" class="widefat" placeholder="Titre du morceau"></td>' +
                 '<td><input type="text" name="md_tracklist[' + index + '][duration]" class="widefat" placeholder="3:42"></td>' +
-                '<td><input type="url" name="md_tracklist[' + index + '][audioUrl]" class="widefat" placeholder="https://..."></td>' +
+                '<td><div style="display:flex;gap:4px;"><input type="url" name="md_tracklist[' + index + '][audioUrl]" class="widefat md-audio-url" placeholder="https://..."><button type="button" class="button md-browse-audio" title="Parcourir la médiathèque">📁</button></div></td>' +
                 '<td><button type="button" class="button md-remove-track" title="Supprimer">✕</button></td>';
             tbody.appendChild(row);
         });
@@ -196,6 +205,37 @@ function md_release_tracklist_cb( $post ) {
                 e.target.closest('.md-track-row').remove();
                 renumber();
             }
+        });
+
+        /* Media Library browser for audio files */
+        var mediaFrame;
+        tbody.addEventListener('click', function(e) {
+            if (!e.target.classList.contains('md-browse-audio')) return;
+
+            var btn = e.target;
+            var urlInput = btn.parentElement.querySelector('.md-audio-url');
+            var titleInput = btn.closest('.md-track-row').querySelector('input[name*="[title]"]');
+
+            if (mediaFrame) {
+                mediaFrame.off('select');
+            } else {
+                mediaFrame = wp.media({
+                    title: 'Sélectionner un fichier audio',
+                    library: { type: 'audio' },
+                    button: { text: 'Utiliser ce fichier' },
+                    multiple: false
+                });
+            }
+
+            mediaFrame.on('select', function() {
+                var attachment = mediaFrame.state().get('selection').first().toJSON();
+                urlInput.value = attachment.url;
+                if (titleInput && !titleInput.value) {
+                    titleInput.value = attachment.title || attachment.filename.replace(/\.[^.]+$/, '');
+                }
+            });
+
+            mediaFrame.open();
         });
     })();
     </script>
@@ -272,9 +312,34 @@ function md_save_release_meta( $post_id ) {
         update_post_meta( $post_id, '_md_artist_ids', [] );
     }
 
-    // Tracklist
+    // NB : la tracklist est désormais gérée par son propre handler
+    // (md_save_release_tracklist) avec un nonce dédié — voir plus bas.
+}
+add_action( 'save_post_release', 'md_save_release_meta' );
+
+/**
+ * Sauvegarde de la TRACKLIST — handler dédié, indépendant du nonce des « Détails ».
+ *
+ * Pourquoi&nbsp;: la meta-box Tracklist reste native même quand ACF est actif
+ * (ACF retire les autres meta-box natives, dont « Détails » et SON nonce). La
+ * sauvegarde de la tracklist était donc bloquée par le nonce absent → les pistes
+ * disparaissaient à la mise à jour. Ce handler utilise le nonce propre à la
+ * tracklist et fonctionne que ACF soit actif ou non.
+ */
+function md_save_release_tracklist( $post_id ) {
+    if ( ! isset( $_POST['md_release_tracklist_nonce'] )
+        || ! wp_verify_nonce( $_POST['md_release_tracklist_nonce'], 'md_release_tracklist_save' ) ) {
+        return;
+    }
+    if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+        return;
+    }
+    if ( ! current_user_can( 'edit_post', $post_id ) ) {
+        return;
+    }
+
+    $tracklist = [];
     if ( isset( $_POST['md_tracklist'] ) && is_array( $_POST['md_tracklist'] ) ) {
-        $tracklist = [];
         foreach ( $_POST['md_tracklist'] as $track ) {
             if ( empty( $track['title'] ) ) {
                 continue;
@@ -285,7 +350,7 @@ function md_save_release_meta( $post_id ) {
                 'audioUrl' => esc_url_raw( $track['audioUrl'] ?? '' ),
             ];
         }
-        update_post_meta( $post_id, '_md_tracklist', $tracklist );
     }
+    update_post_meta( $post_id, '_md_tracklist', $tracklist );
 }
-add_action( 'save_post_release', 'md_save_release_meta' );
+add_action( 'save_post_release', 'md_save_release_tracklist' );

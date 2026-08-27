@@ -65,14 +65,21 @@ html.dark-mode .main-nav.scrolled {
     color: var(--color-text);
     text-decoration: none;
     padding: var(--space-xs) 0;
-    transition: opacity var(--transition-fast);
+    border-bottom: 2px solid transparent; /* réserve la place → aucun saut quand la page courante est soulignée */
+    transition: opacity var(--transition-fast), border-color var(--transition-fast);
     white-space: nowrap;
 }
 
-.nav-links .menu-item a:hover,
+/* Survol : léger estompage */
+.nav-links .menu-item a:hover {
+    opacity: 0.6;
+}
+
+/* Page COURANTE : soulignement net (indicateur clair, distinct du survol) */
 .nav-links .menu-item.current-menu-item a,
 .nav-links .menu-item.current-menu-ancestor a {
-    opacity: 0.6;
+    opacity: 1;
+    border-bottom-color: currentColor;
 }
 
 /* --- Theme Toggle --- */
@@ -208,6 +215,14 @@ html.dark-mode .theme-toggle-icon::before {
 
 .mobile-nav-links .menu-item a:hover {
     opacity: 0.6;
+}
+
+/* Page COURANTE (mobile) : soulignement net */
+.mobile-nav-links .menu-item.current-menu-item a,
+.mobile-nav-links .menu-item.current-menu-ancestor a {
+    opacity: 1;
+    text-decoration: underline;
+    text-underline-offset: 6px;
 }
 
 /* --- Responsive --- */

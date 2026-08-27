@@ -4,14 +4,9 @@
  * Slug: mixies
  */
 get_header();
+set_query_var( 'page_title', 'Mixies' );
+get_template_part( 'template-parts/page-header' );
 ?>
-
-<section class="page-header section">
-    <div class="container">
-        <h1>Mixies</h1>
-
-    </div>
-</section>
 
 <section class="section">
     <div class="container">
@@ -24,9 +19,10 @@ get_header();
         ?>
 
         <div class="mixes-section" id="mixes-list">
-            <p class="no-results">Les mixes arrivent bientôt. Restez connectés.</p>
+            <p class="no-results">Mixies are coming.</p>
         </div>
     </div>
 </section>
 
 <?php get_footer(); ?>
+

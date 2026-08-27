@@ -1,0 +1,188 @@
+/* ==========================================================================
+   Mango Dragon — Admin Panel styles
+   Only loaded on the md-email-admin / md-email-routing admin pages.
+   ========================================================================== */
+
+.md-admin-wrap {
+    max-width: 1200px;
+}
+
+/* --------------------------------------------------------------------------
+   Navigation tabs
+   -------------------------------------------------------------------------- */
+.md-nav-tabs {
+    margin-bottom: 20px;
+}
+
+/* --------------------------------------------------------------------------
+   Tables
+   -------------------------------------------------------------------------- */
+.md-submissions-table th,
+.md-routing-table th {
+    font-weight: 600;
+}
+
+.md-row-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+}
+
+.md-row-actions .button {
+    white-space: nowrap;
+}
+
+.md-row-actions .md-status-select {
+    font-size: 12px;
+    height: 26px;
+    padding: 0 4px;
+}
+
+/* --------------------------------------------------------------------------
+   Status badges
+   -------------------------------------------------------------------------- */
+.md-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+}
+
+.md-badge--new         { background: #dbeafe; color: #1e40af; }
+.md-badge--seen        { background: #e0e7ff; color: #3730a3; }
+.md-badge--in_progress { background: #fef9c3; color: #854d0e; }
+.md-badge--replied     { background: #dcfce7; color: #166534; }
+.md-badge--closed      { background: #f1f5f9; color: #64748b; }
+.md-badge--error       { background: #fee2e2; color: #991b1b; }
+
+/* --------------------------------------------------------------------------
+   Notification log indicators
+   -------------------------------------------------------------------------- */
+.md-log-ok  { color: #166534; font-weight: 600; }
+.md-log-err { color: #991b1b; font-weight: 600; }
+.md-log-none { color: #94a3b8; }
+
+/* --------------------------------------------------------------------------
+   Empty state
+   -------------------------------------------------------------------------- */
+.md-empty {
+    color: #94a3b8;
+    font-style: italic;
+    padding: 12px 0;
+}
+
+/* --------------------------------------------------------------------------
+   Detail view
+   -------------------------------------------------------------------------- */
+.md-detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    gap: 24px;
+    margin-bottom: 32px;
+}
+
+.md-detail-table th {
+    width: 160px;
+    padding: 8px 12px 8px 0;
+    vertical-align: top;
+    color: #64748b;
+    font-weight: 600;
+}
+
+.md-detail-table td {
+    padding: 8px 0;
+}
+
+/* --------------------------------------------------------------------------
+   Cards (sidebar elements)
+   -------------------------------------------------------------------------- */
+.md-card {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 16px 20px;
+    margin-bottom: 16px;
+}
+
+.md-card h3 {
+    margin: 0 0 12px;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+}
+
+.md-card .md-status-select,
+.md-card .button {
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 8px;
+}
+
+.md-resend-result {
+    font-size: 12px;
+    margin-top: 6px;
+    min-height: 18px;
+}
+
+/* --------------------------------------------------------------------------
+   Add / Edit routing rule form
+   -------------------------------------------------------------------------- */
+#md-rule-form-wrap {
+    margin-top: 24px;
+}
+
+#md-rule-form-wrap h2 {
+    margin-top: 0;
+}
+
+#md-rule-form-wrap .form-table th {
+    width: 180px;
+}
+
+#md-rule-form-wrap textarea {
+    width: 100%;
+    box-sizing: border-box;
+    font-family: monospace;
+    font-size: 12px;
+}
+
+.md-form-result {
+    margin-left: 12px;
+    font-size: 13px;
+    vertical-align: middle;
+}
+
+.md-form-result.success { color: #166534; }
+.md-form-result.error   { color: #991b1b; }
+
+/* --------------------------------------------------------------------------
+   Toggle button states
+   -------------------------------------------------------------------------- */
+.md-toggle-rule[data-enabled="1"] {
+    background: #dcfce7;
+    border-color: #86efac;
+    color: #166534;
+    box-shadow: none;
+}
+
+.md-toggle-rule[data-enabled="0"] {
+    background: #f1f5f9;
+    border-color: #cbd5e1;
+    color: #64748b;
+    box-shadow: none;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive
+   -------------------------------------------------------------------------- */
+@media (max-width: 900px) {
+    .md-detail-grid {
+        grid-template-columns: 1fr;
+    }
+}

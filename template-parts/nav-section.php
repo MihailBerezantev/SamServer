@@ -6,37 +6,37 @@
 $nav_items = [
     [
         'url'   => home_url( '/a-propos/' ),
-        'title' => 'À propos',
-        'desc'  => 'Le label, notre histoire',
+        'title' => 'About',
+        'desc'  => 'The label, our story',
     ],
     [
         'url'   => get_post_type_archive_link( 'artiste' ),
-        'title' => 'Artistes',
-        'desc'  => 'Notre roster',
+        'title' => 'Artists',
+        'desc'  => 'Our roster',
     ],
     [
         'url'   => get_post_type_archive_link( 'release' ),
-        'title' => 'Discographie',
+        'title' => 'Discography',
         'desc'  => 'Albums, EPs, singles',
     ],
     [
         'url'   => home_url( '/mixies/' ),
         'title' => 'Mixies',
-        'desc'  => 'Mixes, sessions live',
+        'desc'  => 'Mixes, live sessions',
     ],
     [
         'url'   => home_url( '/studio/' ),
         'title' => 'Studio',
-        'desc'  => 'Enregistrement, mixage, mastering',
+        'desc'  => 'Recording, mixing, mastering',
     ],
     [
         'url'   => home_url( '/contact/' ),
         'title' => 'Contact',
-        'desc'  => 'Démos, collaborations',
+        'desc'  => 'Demos, collaborations',
     ],
 ];
 ?>
-<section class="nav-section" aria-label="Sections du site">
+<section class="nav-section" aria-label="Site sections">
     <div class="nav-section__grid">
         <?php foreach ( $nav_items as $item ) : ?>
         <a href="<?php echo esc_url( $item['url'] ); ?>" class="nav-section__item" data-ajax-link>

@@ -1,0 +1,212 @@
+/* ==========================================================================
+   STANDARD MOBILE — Mango Dragon
+   Chargé EN DERNIER : ce fichier fait autorité sur le rendu téléphone.
+   Établi à partir d'un audit mesuré (375 px) de toutes les pages.
+
+   Règles du standard :
+     1. Aucun défilement horizontal, aucun élément plus large que l'écran.
+     2. Le contenu ne passe jamais sous les barres fixes (header / player).
+     3. Cibles tactiles : 44 px visés ; 24 px minimum absolu (WCAG 2.5.8).
+        Pour les commandes compactes, on agrandit la ZONE DE CLIC sans grossir
+        le visuel (pseudo-élément) → aucun changement de design.
+     4. Champs de formulaire >= 16 px (sinon iOS zoome tout seul au focus).
+     5. Texte de contenu >= 14 px sur téléphone (les micro-libellés stylistiques
+        restent petits mais jamais sous 12 px).
+     6. Zoom utilisateur jamais bloqué.
+   ========================================================================== */
+
+/* --- 1. Garde-fous globaux ------------------------------------------------ */
+html {
+    -webkit-text-size-adjust: 100%; /* pas d'inflation surprise du texte sur iOS */
+}
+
+img, video, svg, iframe {
+    max-width: 100%;
+}
+
+/* Un mot ou une URL très longue ne doit jamais élargir la page */
+h1, h2, h3, h4, p, li, td, a, .content-text {
+    overflow-wrap: anywhere;
+}
+
+/* --- 2. Le contenu ne passe plus sous le player fixe --------------------- */
+/* Le player est en position fixed : sans cette marge, les derniers éléments
+   de la page (footer, dernier bouton…) restaient cachés derrière lui. */
+body {
+    padding-bottom: calc(var(--player-height) + env(safe-area-inset-bottom, 0px));
+}
+
+@media (max-width: 768px) {
+    body {
+        /* le player mesure 64 px sous 768 px (voir player.css) */
+        padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px));
+    }
+}
+
+/* Encoches / barres système : le player reste au-dessus de la zone sûre */
+.player-bar,
+.mobile-menu-overlay {
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+}
+
+/* --- 3. Player : aucun débordement sur petit écran ----------------------- */
+/* Avant : padding 2×32 + info 120 (non compressible) + contrôles + file
+   dépassaient 375 px → le bouton « file d'attente » sortait de l'écran
+   (inaccessible). On rend l'info compressible et on resserre les marges. */
+@media (max-width: 560px) {
+    .player-container {
+        padding: 0 var(--space-sm);
+        gap: var(--space-sm);
+    }
+    .player-info {
+        min-width: 0;      /* compressible */
+        flex: 1 1 auto;
+        overflow: hidden;
+    }
+    .player-meta {
+        min-width: 0;
+        max-width: none;
+        overflow: hidden;
+    }
+    .player-title,
+    .player-artist {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .player-controls,
+    .player-queue-btn {
+        flex: 0 0 auto;    /* jamais rognés / poussés hors écran */
+    }
+}
+
+@media (max-width: 400px) {
+    .player-container { gap: var(--space-xs); }
+    /* Aléatoire + répétition : secondaires, masqués pour garder lecture/piste
+       précédente/suivante + file d'attente accessibles sur très petit écran. */
+    #player-shuffle,
+    #player-repeat { display: none; }
+}
+
+/* --- 4. Cibles tactiles -------------------------------------------------- */
+/* Déclencheur : petit écran OU pointeur grossier. `pointer: coarse` seul ne
+   suffit pas — un navigateur desktop en fenêtre étroite se déclare `fine`,
+   et les émulateurs mobiles aussi : la règle ne s'appliquait donc pas. */
+@media (max-width: 768px), (pointer: coarse) {
+
+    /* a) Commandes assez grandes pour être agrandies directement */
+    .mobile-menu-toggle,
+    .theme-toggle {
+        min-width: 44px;
+        min-height: 44px;
+    }
+
+    .filter-pill,
+    .filter-reset,
+    .btn {
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .nav-links .menu-item a,
+    .mobile-nav-links .menu-item a {
+        padding-block: var(--space-xs);
+    }
+
+    /* b) Commandes compactes : on agrandit la ZONE DE CLIC sans toucher au
+          visuel (le pseudo-élément est invisible mais cliquable). */
+    .player-btn,
+    .release-tracklist__queue-btn,
+    .social-link,
+    .band-arrow,
+    .queue-clear,
+    .slider-arrow {
+        position: relative;
+    }
+    .player-btn::after,
+    .release-tracklist__queue-btn::after,
+    .social-link::after,
+    .band-arrow::after,
+    .queue-clear::after,
+    .slider-arrow::after {
+        content: '';
+        position: absolute;
+        /* étend la zone tactile d'environ 6 à 11 px de chaque côté */
+        inset: -8px;
+    }
+    /* plus petites encore → extension plus large */
+    .release-tracklist__queue-btn::after { inset: -11px; }
+    .social-link::after                  { inset: -10px; }
+
+    /* c) Points du carrousel Studio : 11 px visuellement → zone tactile
+          élargie SANS chevauchement entre voisins (on écarte les points). */
+    .slider-dots { gap: 1.25rem; }
+    .slider-dots .dot { position: relative; }
+    .slider-dots .dot::after {
+        content: '';
+        position: absolute;
+        inset: -14px -10px;   /* ~31 x 39 px cliquables, sans recouvrement */
+    }
+}
+
+/* --- 5. Formulaires ----------------------------------------------------- */
+/* < 16 px sur un champ = iOS zoome la page au focus (et ne dézoome pas).
+   Les 4 champs étaient à 14,4 px. */
+@media (max-width: 768px) {
+    /* On cible AUSSI les classes : `.form-input { font-size:.9rem }` (components.css)
+       a une spécificité supérieure au sélecteur d'élément `input` et gagnait. */
+    input,
+    select,
+    textarea,
+    .form-input,
+    .form-textarea,
+    .upload-form input,
+    .upload-form textarea {
+        font-size: 16px;
+    }
+
+    .form-input,
+    .form-textarea {
+        width: 100%;
+    }
+
+    .upload-zone {
+        padding: var(--space-md) var(--space-sm);
+    }
+}
+
+/* --- 6. Lisibilité du texte sur téléphone ------------------------------- */
+/* On remonte le texte de CONTENU à >= 14 px ; les micro-libellés
+   volontairement discrets sont juste sortis du « trop petit » (>= 12 px). */
+@media (max-width: 768px) {
+    .release-tracklist__title { font-size: 0.9375rem; }  /* 12,8 → 15 px  (contenu) */
+    .release-tracklist__duration,
+    .player-time             { font-size: 0.75rem; }      /* 10,4 → 12 px  (libellé) */
+    .player-title            { font-size: 0.875rem; }     /* 12   → 14 px  (contenu) */
+    .player-artist           { font-size: 0.8125rem; }    /* 11,2 → 13 px  */
+    .tag                     { font-size: 0.75rem; }      /* 10,4 → 12 px  */
+    .footer-email,
+    .footer-copyright        { font-size: 0.8125rem; }    /* 12,5 → 13 px  */
+    .queue-clear             { font-size: 0.8125rem; }
+}
+
+/* --- 7. Confort de lecture / marges ------------------------------------- */
+@media (max-width: 480px) {
+    :root {
+        /* marges latérales plus sobres : 32 px de chaque côté = trop sur 375 px */
+        --container-padding: 1.25rem;
+    }
+}
+
+/* --- 8. Mouvement réduit ------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+    .band-track,
+    .slider-photos__track {
+        animation: none !important;
+        transition: none !important;
+    }
+}

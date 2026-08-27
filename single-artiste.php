@@ -1,6 +1,7 @@
 <?php
 /**
  * Template: Single — Artiste detail page
+ * Layout: Photo (LEFT) + Bio/Info (RIGHT)
  */
 get_header();
 
@@ -15,7 +16,11 @@ $social     = [
 ];
 $genres     = get_the_terms( $artiste_id, 'genre' );
 $types      = get_the_terms( $artiste_id, 'artist_type' );
-$thumb      = get_the_post_thumbnail_url( $artiste_id, 'hero-large' );
+// Portrait affiché en grand sur la fiche → taille 'large' (1024) pour rester net (retina).
+$thumb      = get_the_post_thumbnail_url( $artiste_id, 'large' );
+if ( ! $thumb ) {
+    $thumb  = get_the_post_thumbnail_url( $artiste_id, 'artist-card' );
+}
 
 // Get releases for this artist
 $all_releases = get_posts( [
@@ -32,49 +37,90 @@ foreach ( $all_releases as $rel ) {
         $artist_releases[] = $rel;
     }
 }
+
+// Concerts / dates : les « gigs » sont un CPT géré via CPT UI + ACF.
+// On récupère ceux rattachés à cet artiste (champ relation ACF gig_artists),
+// puis on répartit automatiquement passés / à venir selon la date (champ gig_date).
+$today         = current_time( 'Y-m-d' );
+$upcoming_gigs = [];
+$past_gigs     = [];
+$gig_posts = get_posts( [
+    'post_type'      => 'gig',
+    'post_status'    => 'publish',
+    'posts_per_page' => -1,
+    'meta_query'     => [
+        [
+            'key'     => 'gig_artists',
+            'value'   => '"' . $artiste_id . '"', // relation ACF stockée en tableau sérialisé d'IDs
+            'compare' => 'LIKE',
+        ],
+    ],
+] );
+foreach ( $gig_posts as $gp ) {
+    $date = function_exists( 'get_field' ) ? get_field( 'gig_date', $gp->ID ) : get_post_meta( $gp->ID, 'gig_date', true );
+    if ( empty( $date ) ) {
+        continue;
+    }
+    $g = [
+        'date'  => $date,
+        'venue' => get_the_title( $gp->ID ),
+        'city'  => function_exists( 'get_field' ) ? get_field( 'gig_city', $gp->ID ) : get_post_meta( $gp->ID, 'gig_city', true ),
+        'url'   => function_exists( 'get_field' ) ? get_field( 'gig_url', $gp->ID ) : get_post_meta( $gp->ID, 'gig_url', true ),
+    ];
+    if ( $date >= $today ) {
+        $upcoming_gigs[] = $g;
+    } else {
+        $past_gigs[] = $g;
+    }
+}
+usort( $upcoming_gigs, function ( $a, $b ) { return strcmp( $a['date'], $b['date'] ); } ); // à venir : plus proche d'abord
+usort( $past_gigs, function ( $a, $b ) { return strcmp( $b['date'], $a['date'] ); } );     // passés : plus récent d'abord
 ?>
 
-<section class="single-artiste-hero" <?php if ( $thumb ) : ?>style="background-image:url('<?php echo esc_url( $thumb ); ?>')"<?php endif; ?>>
-    <div class="single-artiste-hero__overlay">
-        <div class="container">
-            <h1><?php the_title(); ?></h1>
-            <?php if ( $genres && ! is_wp_error( $genres ) ) : ?>
-            <div class="single-artiste-hero__genres">
-                <?php foreach ( $genres as $g ) : ?>
-                    <span class="tag"><?php echo esc_html( $g->name ); ?></span>
-                <?php endforeach; ?>
-            </div>
-            <?php endif; ?>
-        </div>
-    </div>
+<!-- HERO BANNER -->
+<section class="single-hero">
+    <div class="container">
+        <h1><?php the_title(); ?></h1>
+
 </section>
 
-<section class="single-artiste-content section">
+<!-- MAIN CONTENT: PHOTO (LEFT) + BIO/INFO (RIGHT) -->
+<section class="single-content-layout section">
     <div class="container">
-        <div class="two-col">
-            <div class="single-artiste-bio">
-                <?php if ( $biography ) : ?>
-                    <h2>Biographie</h2>
-                    <?php echo wp_kses_post( wpautop( $biography ) ); ?>
-                <?php endif; ?>
-
-                <?php if ( has_excerpt() ) : ?>
-                    <p class="subtitle"><?php echo esc_html( get_the_excerpt() ); ?></p>
+        <div class="content-grid">
+            <!-- LEFT: PHOTO -->
+            <div class="content-photo">
+                <?php if ( $thumb ) : ?>
+                    <img src="<?php echo esc_url( $thumb ); ?>"
+                         alt="<?php echo esc_attr( get_the_title( $artiste_id ) ); ?>"
+                         class="content-image"
+                         loading="lazy">
+                <?php else : ?>
+                    <div class="content-image content-image--placeholder"></div>
                 <?php endif; ?>
             </div>
 
-            <aside class="single-artiste-sidebar">
+            <!-- RIGHT: BIO + LINKS + INFO -->
+            <div class="content-text">
+                <!-- Biography -->
+                <?php if ( $biography ) : ?>
+                <div class="content-section">
+                    <h2>Biography</h2>
+                    <?php echo wp_kses_post( wpautop( $biography ) ); ?>
+                </div>
+                <?php endif; ?>
+
+                <!-- Social Links -->
                 <?php
-                // Social links
                 $has_social = false;
                 foreach ( $social as $v ) {
                     if ( $v ) { $has_social = true; break; }
                 }
                 if ( $has_social ) :
                 ?>
-                <div class="artiste-social">
-                    <h3>Liens</h3>
-                    <ul class="social-links-list">
+                <div class="content-section">
+                    <h4>Links</h4>
+                    <ul class="content-links">
                         <?php foreach ( $social as $platform => $url ) :
                             if ( ! $url ) continue;
                             $labels = [
@@ -82,7 +128,7 @@ foreach ( $all_releases as $rel ) {
                                 'soundcloud' => 'SoundCloud',
                                 'bandcamp'   => 'Bandcamp',
                                 'spotify'    => 'Spotify',
-                                'website'    => 'Site web',
+                                'website'    => 'Website',
                             ];
                         ?>
                         <li>
@@ -95,23 +141,97 @@ foreach ( $all_releases as $rel ) {
                 </div>
                 <?php endif; ?>
 
+                <!-- Artist Type -->
                 <?php if ( $types && ! is_wp_error( $types ) ) : ?>
-                <div class="artiste-types">
-                    <h3>Catégorie</h3>
-                    <?php foreach ( $types as $t ) : ?>
-                        <span class="tag"><?php echo esc_html( $t->name ); ?></span>
-                    <?php endforeach; ?>
+                <div class="content-section">
+                    <h3>Category</h3>
+                    <div class="content-tags">
+                        <?php foreach ( $types as $t ) : ?>
+                            <span class="tag"><?php echo esc_html( $t->name ); ?></span>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
                 <?php endif; ?>
-            </aside>
+
+                    <?php if ( $genres && ! is_wp_error( $genres ) ) : ?>
+
+      
+        <div class="single-hero__tags">
+            <h4>Genres:</h4>
+             
+
+            <?php foreach ( $genres as $g ) : ?>
+                <span class="tag"><?php echo esc_html( $g->name ); ?></span>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+    </div>
+            </div>
         </div>
     </div>
 </section>
 
-<?php if ( ! empty( $artist_releases ) ) : ?>
-<section class="single-artiste-releases section">
+<!-- GIGS : Upcoming gigs + Past events (tri automatique par date) -->
+<?php if ( $upcoming_gigs || $past_gigs ) : ?>
+<section class="single-gigs section">
     <div class="container">
-        <h2>Discographie</h2>
+        <?php if ( $upcoming_gigs ) : ?>
+        <div class="gigs-block">
+            <h2>Upcoming gigs</h2>
+            <ul class="gig-list">
+                <?php foreach ( $upcoming_gigs as $g ) : ?>
+                <li class="gig gig--upcoming">
+                    <span class="gig__date"><?php echo esc_html( date_i18n( 'j M Y', strtotime( $g['date'] ) ) ); ?></span>
+                    <span class="gig__info">
+                        <?php if ( ! empty( $g['venue'] ) ) : ?><span class="gig__venue"><?php echo esc_html( $g['venue'] ); ?></span><?php endif; ?>
+                        <?php if ( ! empty( $g['city'] ) ) : ?><span class="gig__city"><?php echo esc_html( $g['city'] ); ?></span><?php endif; ?>
+                    </span>
+                    <?php if ( ! empty( $g['url'] ) ) : ?>
+                    <a class="gig__link" href="<?php echo esc_url( $g['url'] ); ?>" target="_blank" rel="noopener">Tickets</a>
+                    <?php endif; ?>
+                </li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+        <?php endif; ?>
+
+        <?php if ( $past_gigs ) : ?>
+        <div class="gigs-block gigs-block--past">
+            <h2>Past events</h2>
+            <ul class="gig-list gig-list--past">
+                <?php foreach ( $past_gigs as $g ) : ?>
+                <li class="gig gig--past">
+                    <span class="gig__date"><?php echo esc_html( date_i18n( 'j M Y', strtotime( $g['date'] ) ) ); ?></span>
+                    <span class="gig__info">
+                        <?php if ( ! empty( $g['venue'] ) ) : ?><span class="gig__venue"><?php echo esc_html( $g['venue'] ); ?></span><?php endif; ?>
+                        <?php if ( ! empty( $g['city'] ) ) : ?><span class="gig__city"><?php echo esc_html( $g['city'] ); ?></span><?php endif; ?>
+                    </span>
+                    <?php if ( ! empty( $g['url'] ) ) : ?>
+                    <a class="gig__link" href="<?php echo esc_url( $g['url'] ); ?>" target="_blank" rel="noopener">Details</a>
+                    <?php endif; ?>
+                </li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+        <?php endif; ?>
+    </div>
+</section>
+<?php endif; ?>
+
+<!-- CHAMPS ACF SUPPLÉMENTAIRES (ajoutés via l'interface ACF, affichés automatiquement) -->
+<?php if ( function_exists( 'md_render_extra_acf_fields' ) ) : ?>
+<section class="single-extra section">
+    <div class="container">
+        <?php md_render_extra_acf_fields( $artiste_id ); ?>
+    </div>
+</section>
+<?php endif; ?>
+
+<!-- DISCOGRAPHY -->
+<?php if ( ! empty( $artist_releases ) ) : ?>
+<section class="single-releases section">
+    <div class="container">
+        <h2>Discography</h2>
         <div class="cards-grid">
             <?php foreach ( $artist_releases as $release ) :
                 set_query_var( 'release', $release );

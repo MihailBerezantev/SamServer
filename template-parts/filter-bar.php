@@ -14,10 +14,10 @@ if ( ! isset( $filter_config ) ) {
 $tax_labels = [
     'genre'        => 'Genre',
     'release_type' => 'Type',
-    'artist_type'  => 'Catégorie',
+    'artist_type'  => 'Category',
 ];
 ?>
-<div class="filter-bar" id="filter-bar" role="group" aria-label="Filtres">
+<div class="filter-bar" id="filter-bar" role="group" aria-label="Filters">
     <?php foreach ( $filter_config['taxonomies'] as $tax_name ) :
         $terms = get_terms( [
             'taxonomy'   => $tax_name,
@@ -51,7 +51,7 @@ $tax_labels = [
         if ( ! empty( $artistes ) ) :
     ?>
     <div class="filter-group" data-filter-taxonomy="artists">
-        <span class="filter-group__label">Artiste</span>
+        <span class="filter-group__label">Artist</span>
         <?php foreach ( $artistes as $artiste ) : ?>
         <button class="filter-pill"
             data-filter="artists"
@@ -63,5 +63,14 @@ $tax_labels = [
     </div>
     <?php endif; endif; ?>
 
-    <button class="filter-reset" id="filter-reset" style="display:none;">Réinitialiser</button>
+    <?php if ( ! empty( $filter_config['show_sort'] ) ) : ?>
+    <div class="filter-group" data-filter-taxonomy="sort">
+        <span class="filter-group__label">Sort</span>
+        <button class="filter-pill sort-pill active" type="button" data-sort="latest" aria-pressed="true">Latest</button>
+        <button class="filter-pill sort-pill" type="button" data-sort="oldest" aria-pressed="false">Oldest</button>
+        <button class="filter-pill sort-pill" type="button" data-sort="random" aria-pressed="false">Random</button>
+    </div>
+    <?php endif; ?>
+
+    <button class="filter-reset" id="filter-reset" style="display:none;">Reset</button>
 </div>

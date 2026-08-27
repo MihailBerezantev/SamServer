@@ -237,7 +237,7 @@
     transition: var(--transition-color);
 }
 
-.player-queue.open {
+.player-queue[aria-hidden="false"] {
     display: flex;
 }
 
@@ -249,11 +249,7 @@
     border-bottom: 1px solid var(--color-border);
 }
 
-.queue-header h3 {
-    font-family: var(--font-label);
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
+.queue-header {
 }
 
 .queue-clear {
@@ -375,4 +371,30 @@
     .player-meta {
         max-width: 100px;
     }
+}
+
+/* ==========================================================================
+   Mode sombre — lisibilité du player
+   Le player et la file d'attente restent des SURFACES CLAIRES (beige) dans les
+   deux modes. Or certains éléments héritaient de tokens globaux qui s'inversent
+   en sombre :
+     - la piste de progression utilisait --color-border (#222 en sombre) → elle
+       se confondait avec le remplissage noir → on ne voyait plus la position.
+     - le titre des pistes de la file héritait de --color-text (beige en sombre)
+       → beige sur beige → invisible.
+   On force donc une piste claire et une encre foncée sur ces surfaces claires.
+   ========================================================================== */
+html.dark-mode .player-progress-bar,
+html.dark-mode .player-volume-bar {
+    background-color: #d9d6cd; /* piste gris clair → le remplissage noir redevient lisible */
+}
+
+html.dark-mode .player-queue {
+    color: var(--player-color); /* encre foncée → titres de pistes (hérités) de nouveau visibles */
+}
+
+/* Le titre « File d'attente » est un <h3> : il a une couleur de titre propre
+   (--color-text, beige en sombre) qui écrase l'héritage → on la force en foncé. */
+html.dark-mode .queue-header h3 {
+    color: var(--player-color);
 }

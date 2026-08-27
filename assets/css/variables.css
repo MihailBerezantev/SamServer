@@ -28,6 +28,7 @@
     --space-xs: 0.5rem;
     --space-sm: 1rem;
     --space-md: 1.5rem;
+    --space-section: 1.25rem;  /* 20px - Standard section spacing */
     --space-lg: 2rem;
     --space-xl: 3rem;
     --space-2xl: 5rem;
@@ -87,7 +88,7 @@ html.dark-mode {
     --player-color: #000000;
 
     /* Inverted mode-specific backgrounds */
-    --band-bg: #252525;       /* Bands background: very dark brown in dark mode */
+    --band-bg: #110b0b;       /* Bands background: very dark brown in dark mode */
     --footer-bg: #000000;     /* Footer background: black in dark mode */
     --footer-text: #f7f4eb;
     --footer-text-muted: #999999;

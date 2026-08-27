@@ -4,60 +4,41 @@
  * Slug: contact
  */
 get_header();
+get_template_part( 'template-parts/page-header' );
 ?>
 
-<section class="page-header section">
+<?php if ( have_posts() ) : while ( have_posts() ) : the_post(); ?>
+<?php if ( get_the_content() ) : ?>
+<section class="page-intro section">
     <div class="container">
-        <h1>Contact</h1>
-        <?php if ( have_posts() ) : while ( have_posts() ) : the_post(); ?>
-        <?php if ( get_the_content() ) : ?>
-        <div class="page-intro"><?php the_content(); ?></div>
-        <?php endif; endwhile; endif; wp_reset_postdata(); ?>
+        <div class="page-intro-content"><?php the_content(); ?></div>
     </div>
 </section>
+<?php endif; endwhile; endif; wp_reset_postdata(); ?>
 
 <section class="contact-departments section">
     <div class="container">
         <div class="departments-grid">
             <div class="department" id="dept-demo">
-                <h3>Envoyer une démo</h3>
-                <p>Vous souhaitez rejoindre le label ? Envoyez-nous votre musique.</p>
+                <h3>Send a demo</h3>
+                <p>Want to join the label? Send us your music.</p>
                 <?php
                 $form_config = [
                     'id'          => 'demo-form',
-                    'submit_text' => 'Envoyer la démo',
+                    'submit_text' => 'Send demo',
+                    'page_id'     => get_queried_object_id(),
                 ];
                 set_query_var( 'form_config', $form_config );
                 get_template_part( 'template-parts/upload', 'form' );
                 ?>
             </div>
 
-            <div class="department" id="dept-collab">
-                <h3>Collaborations</h3>
-                <p>Propositions de collaborations, événements, partenariats.</p>
-                <?php
-                $form_config = [
-                    'id'          => 'collab-form',
-                    'submit_text' => 'Envoyer la proposition',
-                ];
-                set_query_var( 'form_config', $form_config );
-                get_template_part( 'template-parts/upload', 'form' );
-                ?>
-            </div>
-
-            <div class="department" id="dept-studio">
-                <h3>Studio</h3>
-                <p>Réservation studio, mastering, mixage.</p>
-                <a href="<?php echo esc_url( home_url( '/studio/' ) ); ?>" class="btn btn--filled" data-ajax-link>
-                    Voir les services studio
-                </a>
-            </div>
 
             <div class="department" id="dept-general">
-                <h3>Contact général</h3>
-                <p>Pour toute autre question.</p>
+                <h3>General enquiries</h3>
+                <p>For any other enquiries.</p>
                 <p class="contact-email">
-                    <a href="mailto:contact@mangodragon.ch">contact@mangodragon.ch</a>
+                    <a href="mailto:contact@mango-dragon.com">contact@mango-dragon.com</a>
                 </p>
             </div>
         </div>

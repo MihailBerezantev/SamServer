@@ -13,8 +13,18 @@
    * ===================================================== */
   var defaults = { speed: [80, 80, 50] };
   var cfg = (window.mdBands && window.mdBands.speed) ? window.mdBands : defaults;
+  var MOBILE_BP = 640;
+  var MOBILE_FACTOR = 0.5;
 
-  var tracks = [];  // store {track, pps} for live preview access
+  var tracks = [];  // store {track, basePps} for live preview access
+
+  function isMobile() {
+    return window.innerWidth <= MOBILE_BP;
+  }
+
+  function effectivePps(basePps) {
+    return isMobile() ? basePps * MOBILE_FACTOR : basePps;
+  }
 
   function calcDuration(track, pps) {
     var halfWidth = track.scrollWidth / 2;
@@ -28,18 +38,18 @@
       var track = band.querySelector('.band-track');
       if (!track) return;
 
-      var pps = (cfg.speed && cfg.speed[i] !== undefined) ? parseInt(cfg.speed[i], 10) : 80;
-      tracks[i] = { track: track, pps: pps };
+      var basePps = (cfg.speed && cfg.speed[i] !== undefined) ? parseInt(cfg.speed[i], 10) : 80;
+      tracks[i] = { track: track, basePps: basePps };
 
       /* Recalculate when all images in this band are loaded */
       var imgs = track.querySelectorAll('img');
       var loaded = 0;
       function onLoad() {
         loaded++;
-        if (loaded >= imgs.length) calcDuration(track, pps);
+        if (loaded >= imgs.length) calcDuration(track, effectivePps(basePps));
       }
       if (imgs.length === 0) {
-        calcDuration(track, pps);
+        calcDuration(track, effectivePps(basePps));
       } else {
         imgs.forEach(function (img) {
           if (img.complete) { onLoad(); }
@@ -47,9 +57,12 @@
         });
       }
 
-      /* Recalculate on resize */
+      /* Recalculate on resize (also handles mobile ↔ desktop speed switch) */
       if (window.ResizeObserver) {
-        new ResizeObserver(function () { calcDuration(track, tracks[i] ? tracks[i].pps : pps); }).observe(band);
+        new ResizeObserver(function () {
+          var t = tracks[i];
+          if (t) calcDuration(track, effectivePps(t.basePps));
+        }).observe(band);
       }
 
       /* hover pause */
@@ -66,10 +79,10 @@
   window.mdRecalcBand = function (i, newPps) {
     if (!tracks[i]) return;
     if (newPps !== undefined) {
-      tracks[i].pps = newPps;
+      tracks[i].basePps = newPps;
       if (cfg.speed) cfg.speed[i] = newPps;
     }
-    calcDuration(tracks[i].track, tracks[i].pps);
+    calcDuration(tracks[i].track, effectivePps(tracks[i].basePps));
   };
 
   if (document.readyState === 'loading') {

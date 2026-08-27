@@ -3,6 +3,8 @@
  * Template: Archive — Artistes catalog
  */
 get_header();
+set_query_var( 'page_title', 'Artists' );
+get_template_part( 'template-parts/page-header' );
 
 $artistes = get_posts( [
     'post_type'      => 'artiste',
@@ -11,12 +13,6 @@ $artistes = get_posts( [
     'order'          => 'ASC',
 ] );
 ?>
-
-<section class="page-header section">
-    <div class="container">
-        <h1>Artistes</h1>
-    </div>
-</section>
 
 <section class="section">
     <div class="container">
@@ -37,7 +33,7 @@ $artistes = get_posts( [
             endforeach; ?>
         </div>
         <?php else : ?>
-        <p class="no-results">Aucun artiste pour le moment.</p>
+        <p class="no-results">No artists yet.</p>
         <?php endif; ?>
     </div>
 </section>

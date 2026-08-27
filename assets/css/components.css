@@ -162,7 +162,7 @@
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-sm);
-    margin-bottom: var(--space-xl);
+    margin-bottom: var(--space-section);
 }
 
 .filter-group {
@@ -283,7 +283,7 @@
 /* --- File Upload Zone --- */
 .upload-zone {
     border: 2px dashed var(--color-border);
-    padding: var(--space-lg);
+    padding: var(--space-section);
     text-align: center;
     cursor: pointer;
     transition: var(--transition-color), border-color var(--transition-normal);
@@ -354,6 +354,17 @@
     height: 22px;
     fill: var(--color-text);
     transition: fill var(--transition-normal);
+}
+
+/* --- Footer social icons (smaller) --- */
+.footer-bottom .social-link {
+    width: 24px;
+    height: 24px;
+}
+
+.footer-bottom .social-link svg {
+    width: 14px;
+    height: 14px;
 }
 
 /* --- Tags / Genre pills inline --- */

@@ -1,0 +1,48 @@
+{
+    "key": "group_md_visuals",
+    "title": "Page Visuals",
+    "fields": [
+        {
+            "key": "field_mdvis_description",
+            "label": "Description",
+            "name": "mdvis_description",
+            "aria-label": "",
+            "type": "wysiwyg",
+            "instructions": "Texte affiché au-dessus de la galerie.",
+            "required": false,
+            "conditional_logic": false,
+            "wrapper": {
+                "width": "",
+                "class": "",
+                "id": ""
+            },
+            "tabs": "all",
+            "toolbar": "full",
+            "media_upload": 1,
+            "default_value": "",
+            "delay": 0
+        }
+    ],
+    "location": [
+        [
+            {
+                "param": "page_template",
+                "operator": "==",
+                "value": "page-visuals.php"
+            }
+        ]
+    ],
+    "menu_order": 0,
+    "position": "normal",
+    "style": "default",
+    "label_placement": "top",
+    "instruction_placement": "label",
+    "hide_on_screen": [],
+    "active": true,
+    "description": "",
+    "show_in_rest": false,
+    "display_title": "",
+    "allow_ai_access": false,
+    "ai_description": "",
+    "modified": 1786560934
+}

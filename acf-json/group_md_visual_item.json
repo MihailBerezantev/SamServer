@@ -1,0 +1,75 @@
+{
+    "key": "group_md_visual_item",
+    "title": "Détails du visuel",
+    "fields": [
+        {
+            "key": "field_mdvis_item_description",
+            "label": "Description",
+            "name": "mdvis_item_description",
+            "aria-label": "",
+            "type": "textarea",
+            "instructions": "Affichée au survol de la photo sur la page Visuals.",
+            "required": false,
+            "conditional_logic": false,
+            "wrapper": {
+                "width": "",
+                "class": "",
+                "id": ""
+            },
+            "rows": 3,
+            "new_lines": "wpautop",
+            "default_value": "",
+            "maxlength": "",
+            "placeholder": ""
+        },
+        {
+            "key": "field_mdvis_artist_ids",
+            "label": "Artistes",
+            "name": "mdvis_artist_ids",
+            "aria-label": "",
+            "type": "relationship",
+            "instructions": "Artiste(s) associé(s) à ce projet visuel.",
+            "required": false,
+            "conditional_logic": false,
+            "wrapper": {
+                "width": "",
+                "class": "",
+                "id": ""
+            },
+            "post_type": [
+                "artiste"
+            ],
+            "taxonomy": [],
+            "filters": [
+                "search"
+            ],
+            "return_format": "id",
+            "min": 0,
+            "max": 0,
+            "elements": [],
+            "bidirectional_target": []
+        }
+    ],
+    "location": [
+        [
+            {
+                "param": "post_type",
+                "operator": "==",
+                "value": "visual"
+            }
+        ]
+    ],
+    "menu_order": 0,
+    "position": "normal",
+    "style": "default",
+    "label_placement": "top",
+    "instruction_placement": "label",
+    "hide_on_screen": [],
+    "active": true,
+    "description": "",
+    "show_in_rest": false,
+    "display_title": "",
+    "allow_ai_access": false,
+    "ai_description": "",
+    "modified": 1786561594
+}
