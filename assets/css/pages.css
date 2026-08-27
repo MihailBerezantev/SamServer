@@ -686,23 +686,26 @@ html.dark-mode .single-hero {
     text-align: right;
 }
 
-/* Hover: show play icon instead of number */
-.release-tracklist__item--playable .release-tracklist__num {
-    display: inline;
-}
+/* Icône play : visible au repos, renforcée au survol.
 
+   Elle était masquée par défaut, censée laisser la place au numéro de piste et
+   n'apparaître qu'au survol. Mais le numéro n'est rendu que pour les pistes
+   SANS audio (voir single-release.php) : sur une piste jouable la case restait
+   donc vide, et rien n'indiquait que la ligne était lisible. Au tactile, où le
+   survol n'existe pas, le contrôle était purement et simplement inatteignable.
+
+   Les règles .release-tracklist__num pour les pistes jouables étaient du code
+   mort pour la même raison — supprimées. */
 .release-tracklist__item--playable .icon-play {
-    display: none;
-}
-
-.release-tracklist__item--playable:hover .release-tracklist__num,
-.release-tracklist__item--active .release-tracklist__num {
-    display: none;
+    display: block;
+    opacity: 0.5;
+    transition: opacity var(--transition-fast);
 }
 
 .release-tracklist__item--playable:hover .icon-play,
+.release-tracklist__item--playable:focus-within .icon-play,
 .release-tracklist__item--active .icon-play {
-    display: block;
+    opacity: 1;
 }
 
 .release-tracklist__item--active.is-playing .icon-play {
@@ -767,14 +770,21 @@ html.dark-mode .single-hero {
     text-align: right;
 }
 
-/* Queue button — visible on hover */
+/* Bouton file d'attente : toujours visible, discret au repos.
+   Il était à opacity 0 et ne se révélait qu'au survol de la ligne — invisible
+   pour qui ne survole pas, et définitivement invisible au tactile.
+
+   Le token utilisé est --color-text et non --color-text-muted : à 0.45
+   d'opacité, le muted plafonnait à 1.88:1 en thème clair et 2.19:1 en sombre,
+   sous le seuil WCAG de 3:1 exigé pour un composant d'interface. Le réglage
+   actuel donne 3.9:1 en clair et 5.0:1 en sombre. */
 .release-tracklist__queue-btn {
     background: none;
     border: none;
     cursor: pointer;
     padding: 4px;
-    color: var(--color-text-muted);
-    opacity: 0;
+    color: var(--color-text);
+    opacity: 0.5;
     transition: opacity var(--transition-fast), color var(--transition-fast);
     flex-shrink: 0;
     display: flex;
@@ -783,10 +793,11 @@ html.dark-mode .single-hero {
 }
 
 .release-tracklist__item--playable:hover .release-tracklist__queue-btn {
-    opacity: 0.6;
+    opacity: 0.8;
 }
 
-.release-tracklist__queue-btn:hover {
+.release-tracklist__queue-btn:hover,
+.release-tracklist__queue-btn:focus-visible {
     opacity: 1 !important;
     color: var(--color-text);
 }
