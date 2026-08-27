@@ -134,8 +134,8 @@ if ( $thumb_id ) {
      .visual-collection__grid casserait la justification des rangées de photos,
      qui répartit les vignettes selon leur ratio. -->
 <?php
-$md_visual_videos = function_exists( 'md_youtube_ids' ) && function_exists( 'get_field' )
-    ? md_youtube_ids( (string) get_field( 'mdvis_videos', $visual_id ) )
+$md_visual_videos = function_exists( 'md_youtube_ids' )
+    ? md_youtube_ids( (string) get_post_meta( $visual_id, '_md_videos', true ) )
     : [];
 if ( $md_visual_videos ) :
 ?>

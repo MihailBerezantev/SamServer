@@ -53,56 +53,132 @@ function md_youtube_embed_url( $id ) {
 }
 
 /**
- * Ajoute le champ « Vidéos YouTube » aux groupes ACF existants.
+ * Meta-box « Vidéos » — une ligne par URL, ajoutable et supprimable.
  *
- * md_acf_seed_groups() n'importe md_acf_group_definitions() qu'UNE SEULE FOIS,
- * protégé par l'option md_acf_seeded. Passée cette amorce, ACF gère les groupes
- * depuis sa propre interface : ajouter un champ à la définition PHP n'a plus
- * aucun effet et le champ reste invisible dans le back-office.
+ * Volontairement native plutôt qu'ACF. Le champ avait d'abord été déclaré dans
+ * md_acf_group_definitions(), qui n'est importé qu'une seule fois (option
+ * md_acf_seeded) : il n'atteignait jamais le back-office. Puis via le filtre
+ * acf/load_fields : il s'affichait, mais ACF ne pouvait pas le retrouver par sa
+ * clé au moment d'enregistrer — acf_get_field() renvoyait null — et jetait la
+ * valeur saisie.
  *
- * On passe donc par le filtre acf/load_fields, qui AJOUTE le champ à la liste
- * déjà chargée. À ne surtout pas remplacer par acf_add_local_field() avec un
- * 'parent' : ACF considère alors le groupe comme local et sert uniquement les
- * champs déclarés en PHP, faisant disparaître la biographie, les liens sociaux
- * et la description de l'interface.
+ * Une meta-box native n'a aucun de ces problèmes et donne l'interface
+ * répétable demandée, sur le modèle de la tracklist des releases.
  *
- * @param array $fields Champs déjà chargés pour le groupe.
- * @param array $parent Le groupe en cours de chargement.
- * @return array
+ * Stockage : _md_videos, une URL par ligne — le format que md_youtube_ids()
+ * sait déjà lire.
  */
-add_filter( 'acf/load_fields', 'md_append_video_field', 10, 2 );
-function md_append_video_field( $fields, $parent ) {
-    $cibles = [
-        'group_md_artiste'     => [ 'key' => 'field_md_videos',    'name' => 'mdacf_videos' ],
-        'group_md_visual_item' => [ 'key' => 'field_mdvis_videos', 'name' => 'mdvis_videos' ],
-    ];
-
-    $cle = isset( $parent['key'] ) ? $parent['key'] : '';
-    if ( ! isset( $cibles[ $cle ] ) ) {
-        return $fields;
+add_action( 'add_meta_boxes', 'md_add_videos_meta_box' );
+function md_add_videos_meta_box() {
+    foreach ( [ 'artiste', 'visual' ] as $type ) {
+        add_meta_box(
+            'md_videos_box',
+            'Vidéos YouTube',
+            'md_videos_meta_box_cb',
+            $type,
+            'normal',
+            'default'
+        );
     }
+}
 
-    // Déjà présent (groupe modifié depuis l'interface) : on ne double pas.
-    foreach ( (array) $fields as $f ) {
-        if ( isset( $f['name'] ) && $f['name'] === $cibles[ $cle ]['name'] ) {
-            return $fields;
+function md_videos_meta_box_cb( $post ) {
+    // Nonce dédié : cette meta-box reste native même quand ACF est actif.
+    wp_nonce_field( 'md_videos_save', 'md_videos_nonce' );
+
+    $urls = preg_split( '/\R/', (string) get_post_meta( $post->ID, '_md_videos', true ) );
+    $urls = array_values( array_filter( array_map( 'trim', (array) $urls ) ) );
+    ?>
+    <div id="md-videos-wrapper">
+        <table class="widefat" id="md-videos-table">
+            <thead>
+                <tr>
+                    <th style="width:30px;">#</th>
+                    <th>URL de la vidéo</th>
+                    <th style="width:40px;"></th>
+                </tr>
+            </thead>
+            <tbody id="md-videos-body">
+                <?php foreach ( $urls as $i => $url ) : ?>
+                <tr class="md-video-row">
+                    <td class="md-video-num"><?php echo intval( $i + 1 ); ?></td>
+                    <td><input type="url" name="md_videos[]" value="<?php echo esc_url( $url ); ?>" class="widefat" placeholder="https://www.youtube.com/watch?v=..."></td>
+                    <td><button type="button" class="button md-remove-video" title="Supprimer">&#10005;</button></td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+        <p style="margin-top:10px;">
+            <button type="button" class="button button-primary" id="md-add-video">+ Ajouter une vidéo</button>
+        </p>
+        <p class="description">
+            Une URL par ligne. Formats acceptés : youtube.com/watch?v=…, youtu.be/…, /shorts/…, /live/…
+            Les lignes non reconnues sont ignorées plutôt que d'afficher un lecteur cassé.
+        </p>
+    </div>
+
+    <script>
+    (function () {
+        var tbody  = document.getElementById('md-videos-body');
+        var addBtn = document.getElementById('md-add-video');
+        if (!tbody || !addBtn) return;
+
+        function renumber() {
+            tbody.querySelectorAll('.md-video-row').forEach(function (row, i) {
+                row.querySelector('.md-video-num').textContent = i + 1;
+            });
         }
+
+        function addRow(value) {
+            var tr = document.createElement('tr');
+            tr.className = 'md-video-row';
+            tr.innerHTML = '<td class="md-video-num"></td>'
+                + '<td><input type="url" name="md_videos[]" class="widefat" placeholder="https://www.youtube.com/watch?v=..."></td>'
+                + '<td><button type="button" class="button md-remove-video" title="Supprimer">&#10005;</button></td>';
+            tbody.appendChild(tr);
+            if (value) tr.querySelector('input').value = value;
+            renumber();
+        }
+
+        addBtn.addEventListener('click', function () { addRow(''); });
+
+        tbody.addEventListener('click', function (e) {
+            if (!e.target.classList.contains('md-remove-video')) return;
+            e.target.closest('.md-video-row').remove();
+            renumber();
+        });
+
+        // Une ligne vide d'amorce quand il n'y a encore aucune vidéo.
+        if (!tbody.querySelector('.md-video-row')) addRow('');
+    })();
+    </script>
+    <?php
+}
+
+/**
+ * Enregistre les URLs saisies dans _md_videos, une par ligne.
+ *
+ * Les lignes vides sont écartées : la meta-box affiche toujours une ligne
+ * d'amorce, qui ne doit pas se transformer en saut de ligne parasite.
+ */
+add_action( 'save_post_artiste', 'md_save_videos_meta' );
+add_action( 'save_post_visual', 'md_save_videos_meta' );
+function md_save_videos_meta( $post_id ) {
+    if ( ! isset( $_POST['md_videos_nonce'] ) || ! wp_verify_nonce( $_POST['md_videos_nonce'], 'md_videos_save' ) ) {
+        return;
+    }
+    if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
+        return;
+    }
+    if ( ! current_user_can( 'edit_post', $post_id ) ) {
+        return;
     }
 
-    $fields[] = [
-        'ID'           => 0,
-        'key'          => $cibles[ $cle ]['key'],
-        'name'         => $cibles[ $cle ]['name'],
-        'label'        => 'Vidéos YouTube',
-        'type'         => 'textarea',
-        'rows'         => 4,
-        // Pas de wpautop : le contenu est une liste d'URL, pas de la prose.
-        'new_lines'    => '',
-        'instructions' => 'Une URL par ligne. Formats acceptés : youtube.com/watch?v=…, youtu.be/…, /shorts/…',
-        'required'     => 0,
-        'parent'       => $cle,
-        'menu_order'   => 99,
-    ];
+    $urls = isset( $_POST['md_videos'] ) ? (array) wp_unslash( $_POST['md_videos'] ) : [];
+    $urls = array_values( array_filter( array_map( function ( $u ) {
+        return esc_url_raw( trim( $u ) );
+    }, $urls ) ) );
 
-    return $fields;
+    update_post_meta( $post_id, '_md_videos', implode( "
+", $urls ) );
 }
