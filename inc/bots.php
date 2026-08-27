@@ -38,10 +38,20 @@ if ( ! defined( 'MD_BOTS_CAP' ) ) {
 function md_bots_registry() {
     return [
         'subventions' => [
-            'titre'  => 'Subventions',
-            'menu'   => 'Subventions',
-            'option' => 'md_bot_subventions',
-            'vide'   => 'Aucune recherche effectuée pour le moment. Lance /mango-subventions depuis Claude Code.',
+            'titre'    => 'Subventions',
+            'menu'     => 'Subventions',
+            'option'   => 'md_bot_subventions',
+            'colonne2' => 'Échéance',
+            'vide'     => 'Aucune recherche effectuée pour le moment. Clique sur « Lancer la recherche ».',
+        ],
+        'promo' => [
+            'titre'    => 'Promo & premières',
+            'menu'     => 'Promo & premières',
+            'option'   => 'md_bot_promo',
+            // null = colonne masquée. Ces médias n'ont pas de date limite ;
+            // afficher vingt fois « non publiée » n'apprendrait rien.
+            'colonne2' => null,
+            'vide'     => 'Aucune recherche effectuée pour le moment. Clique sur « Lancer la recherche ».',
         ],
     ];
 }
@@ -191,13 +201,15 @@ function md_bots_render( $slug, array $bot ) {
         <?php endif; ?>
 
         <?php
-        // Le bouton n'apparaît que pour les bots dotés d'un runner.
-        if ( 'subventions' === $slug && function_exists( 'md_bots_run_subventions' ) ) :
+        // Le bouton n'apparaît que pour les bots dotés d'un runner : la
+        // convention md_bots_run_{slug} suffit à le savoir.
+        if ( function_exists( 'md_bots_run_' . $slug ) ) :
             $etat = get_option( 'md_omniroute_status' );
             ?>
             <p>
                 <form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" style="display:inline">
                     <input type="hidden" name="action" value="md_bots_run">
+                    <input type="hidden" name="md_bot" value="<?php echo esc_attr( $slug ); ?>">
                     <?php wp_nonce_field( 'md_bots_run' ); ?>
                     <button type="submit" class="button button-primary">Lancer la recherche</button>
                 </form>
@@ -237,11 +249,17 @@ function md_bots_render( $slug, array $bot ) {
         endif;
         ?>
 
+        <?php
+        // Colonne d'échéance affichée seulement pour les bots qui en ont une.
+        $col2 = array_key_exists( 'colonne2', $bot ) ? $bot['colonne2'] : 'Échéance';
+        ?>
         <table class="widefat striped">
             <thead>
                 <tr>
                     <th style="width:28%">Intitulé</th>
-                    <th style="width:14%">Échéance</th>
+                    <?php if ( null !== $col2 ) : ?>
+                        <th style="width:14%"><?php echo esc_html( $col2 ); ?></th>
+                    <?php endif; ?>
                     <th style="width:12%">Statut</th>
                     <th>Détails</th>
                 </tr>
@@ -273,6 +291,7 @@ function md_bots_render( $slug, array $bot ) {
                             <div class="description"><?php echo esc_html( $sous ); ?></div>
                         <?php endif; ?>
                     </td>
+                    <?php if ( null !== $col2 ) : ?>
                     <td>
                         <?php if ( ! empty( $echance ) ) : ?>
                             <?php echo esc_html( (string) $echance ); ?>
@@ -289,6 +308,7 @@ function md_bots_render( $slug, array $bot ) {
                             <span class="description">non publiée</span>
                         <?php endif; ?>
                     </td>
+                    <?php endif; ?>
                     <td>
                         <?php echo esc_html( $statut ); ?>
                         <?php if ( ! empty( $e['suivi'] ) && 'aucune' !== $e['suivi'] ) : ?>

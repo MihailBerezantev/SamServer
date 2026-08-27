@@ -244,7 +244,7 @@ function md_bots_sources_subventions() {
  *
  * @return array Liste d'URL absolues, même domaine, limitée à $max.
  */
-function md_bots_links_from( $url, $max = 4 ) {
+function md_bots_links_from( $url, $max = 4, $mots = null ) {
     $r = wp_remote_get( $url, [
         'timeout'    => 30,
         'user-agent' => 'Mozilla/5.0 (compatible; MangoDragonBot/1.0; +https://mango-dragon.com)',
@@ -261,7 +261,14 @@ function md_bots_links_from( $url, $max = 4 ) {
 
     $base   = wp_parse_url( $url );
     $racine = ( $base['scheme'] ?? 'https' ) . '://' . ( $base['host'] ?? '' );
-    $mots = '~(soutien|subvention|bourse|encouragement|fonds|contribution|appel-a|candidat|aide-a-l)~i';
+    // Les mots-clés dépendent du bot : ceux des subventions ne trouvent rien
+    // sur un site de média musical, où l'information utile vit sous « contact »
+    // ou « submit ». Une première version imposait la liste des subventions à
+    // tous les bots — le bot Promo retombait alors sur les pages d'accueil et
+    // n'en tirait qu'une fiche sur sept.
+    if ( null === $mots ) {
+        $mots = '~(soutien|subvention|bourse|encouragement|fonds|contribution|appel-a|candidat|aide-a-l)~i';
+    }
 
     // Deux familles de rejets, apprises à l'usage :
     // — les fichiers et les points d'entrée d'API, qui ne sont pas des pages ;
@@ -318,7 +325,7 @@ function md_bots_links_from( $url, $max = 4 ) {
  *
  * @return array Sources à lire réellement.
  */
-function md_bots_expand_sources( array $sources ) {
+function md_bots_expand_sources( array $sources, $mots = null ) {
     $final = [];
 
     foreach ( $sources as $src ) {
@@ -327,7 +334,7 @@ function md_bots_expand_sources( array $sources ) {
             continue;
         }
 
-        $liens = md_bots_links_from( $src['url'] );
+        $liens = md_bots_links_from( $src['url'], 4, $mots );
 
         if ( empty( $liens ) ) {
             // Aucun sous-lien : on lit la page d'index faute de mieux.
@@ -426,6 +433,77 @@ function md_bots_extract_subventions( $source, $texte ) {
 // ==========================================================================
 // Orchestration
 // ==========================================================================
+
+/**
+ * Boucle d'exécution commune à tous les bots.
+ *
+ * Chaque bot fournit ses sources, son extracteur et son convertisseur en
+ * entrées d'affichage ; le reste — budget de temps, pages en échec, garde-fou
+ * contre la troncature silencieuse — est identique et vit ici.
+ *
+ * @param array    $sources    Sources déjà développées.
+ * @param callable $extraire   fn( string $nom, string $texte ) => array|WP_Error
+ * @param callable $convertir  fn( array $brut, array $src ) => array|null
+ * @param string   $option     Option WordPress où écrire.
+ * @param callable $resumer    fn( array $entrees, int $lues, int $vides ) => string
+ * @return array
+ */
+function md_bots_run_generic( $sources, $extraire, $convertir, $option, $resumer ) {
+    if ( ! md_omniroute_up() && ! md_omniroute_start() ) {
+        return [ 'ok' => false, 'message' => 'OmniRoute ne répond pas et n\'a pas pu être relancé.' ];
+    }
+
+    $entrees = [];
+    $echecs  = [];
+    $vides   = 0;
+    $debut   = time();
+
+    // Depuis le navigateur, PHP coupe la requête : on garde une marge. En ligne
+    // de commande ou par cron, aucune limite ne s'applique.
+    $budget = ( ( defined( 'WP_CLI' ) && WP_CLI ) || wp_doing_cron() ) ? 900 : 240;
+
+    foreach ( $sources as $src ) {
+        if ( ( time() - $debut ) > $budget ) {
+            $echecs[] = $src['nom'] . ' (temps imparti dépassé)';
+            continue;
+        }
+
+        $texte = md_bots_page_text( $src['url'] );
+        if ( is_wp_error( $texte ) ) {
+            $echecs[] = $src['nom'] . ' (' . $texte->get_error_message() . ')';
+            continue;
+        }
+
+        $bruts = call_user_func( $extraire, $src['nom'], $texte );
+        if ( is_wp_error( $bruts ) ) {
+            $echecs[] = $src['nom'] . ' (' . $bruts->get_error_message() . ')';
+            continue;
+        }
+
+        foreach ( $bruts as $brut ) {
+            $entree = call_user_func( $convertir, $brut, $src );
+            if ( null === $entree ) {
+                $vides++;
+                continue;
+            }
+            $entrees[] = $entree;
+        }
+    }
+
+    $resume = call_user_func( $resumer, $entrees, count( $sources ) - count( $echecs ), $vides );
+
+    if ( $echecs ) {
+        $resume .= ' Recherche INCOMPLÈTE — pages non lues : ' . implode( ' ; ', $echecs ) . '.';
+    }
+
+    update_option( $option, wp_json_encode( [
+        'execute_le' => current_time( 'Y-m-d' ),
+        'resume'     => $resume,
+        'entrees'    => $entrees,
+    ] ) );
+
+    return [ 'ok' => true, 'message' => $resume ];
+}
 
 /**
  * Exécute la recherche complète et écrit le résultat dans l'option du bot.
@@ -553,16 +631,146 @@ function md_bots_run_subventions() {
 // Bouton « Lancer la recherche »
 // ==========================================================================
 
+// ==========================================================================
+// Bot « Plateformes de promo et premières »
+// ==========================================================================
+
+/**
+ * Médias susceptibles de relayer une sortie ou d'accueillir une première.
+ *
+ * URL vérifiées : chacune renvoie 200. Deux candidates ont été écartées après
+ * test — resident advisor renvoie 403 aux robots, Data Transmission ne répond
+ * plus. Les laisser aurait produit des échecs à chaque exécution.
+ */
+function md_bots_sources_promo() {
+    return [
+        [ 'nom' => 'UKF — bass music',            'url' => 'https://ukf.com/', 'index' => true ],
+        [ 'nom' => 'Bandcamp Daily',              'url' => 'https://daily.bandcamp.com/', 'index' => true ],
+        [ 'nom' => 'XLR8R',                       'url' => 'https://www.xlr8r.com/', 'index' => true ],
+        [ 'nom' => 'Inverted Audio',              'url' => 'https://inverted-audio.com/contact/' ],
+        [ 'nom' => 'Crack Magazine',              'url' => 'https://crackmagazine.net/', 'index' => true ],
+        [ 'nom' => 'The Quietus',                 'url' => 'https://thequietus.com/', 'index' => true ],
+        [ 'nom' => 'Stamp The Wax',               'url' => 'https://stampthewax.com/contact/' ],
+        [ 'nom' => 'Mixmag',                      'url' => 'https://mixmag.net/', 'index' => true ],
+    ];
+}
+
+/**
+ * Extrait les modalités de soumission décrites dans le texte fourni.
+ *
+ * @return array|WP_Error
+ */
+function md_bots_extract_promo( $source, $texte ) {
+    $system = "Tu es un assistant qui EXTRAIT des informations d'un texte fourni. "
+        . "Tu ne réponds jamais de mémoire. Si une information n'apparaît pas dans le texte, tu écris null. "
+        . "Tu réponds uniquement par du JSON valide, sans commentaire ni balise markdown.";
+
+    $user = "Voici le texte d'une page d'un média musical.\n\n"
+        . "Contexte : label associatif genevois de musiques électroniques et expérimentales "
+        . "(drum & bass, jungle, dubstep, dub, bass music, ambient, noise). Il cherche des médias "
+        . "qui relaient ses sorties ou accueillent des premières de titres.\n\n"
+        . "Extrais UNIQUEMENT ce que le texte dit sur la façon de soumettre de la musique :\n"
+        . '{"plateformes":[{"nom":"...","type":"blog|magazine|chaine|podcast|playlist|null",'
+        . '"genres":"genres couverts, ou null","soumission":"comment soumettre : e-mail, formulaire, adresse — ou null",'
+        . '"premieres":"ce que le texte dit des premières, ou null","pertinent":true|false,'
+        . '"motif":"si non pertinent, pourquoi"}]}' . "\n\n"
+        . "Règles strictes :\n"
+        . "- soumission UNIQUEMENT si le texte explique réellement comment envoyer sa musique.\n"
+        . "- N'invente aucune adresse e-mail : recopie celle du texte ou écris null.\n"
+        . "- pertinent = false si le média ne couvre pas ces genres.\n"
+        . "- Rien de tel dans le texte ? Réponds {\"plateformes\":[]}.\n\n"
+        . "SOURCE : " . $source . "\n\n=== TEXTE ===\n" . $texte;
+
+    $reponse = md_omniroute_complete( $system, $user );
+    if ( is_wp_error( $reponse ) ) {
+        return $reponse;
+    }
+
+    $data = md_json_from_reply( $reponse );
+    if ( null === $data || ! isset( $data['plateformes'] ) || ! is_array( $data['plateformes'] ) ) {
+        return new WP_Error( 'extract_format', 'Le modèle n\'a pas renvoyé de JSON exploitable.' );
+    }
+
+    return $data['plateformes'];
+}
+
+/**
+ * Lance la recherche des plateformes de promo.
+ */
+function md_bots_run_promo() {
+    // Sur un média, l'information utile est sous « contact », « submit »,
+    // « demo » ou « about » — jamais sous les mots-clés des subventions.
+    $mots = '~(contact|submit|submission|demo|promo|press|about|advertis|write-for|contribut)~i';
+
+    return md_bots_run_generic(
+        md_bots_expand_sources( md_bots_sources_promo(), $mots ),
+        'md_bots_extract_promo',
+        function ( $p, $src ) {
+            if ( empty( $p['nom'] ) ) {
+                return null;
+            }
+
+            // Sans modalité de soumission, la fiche ne sert à rien : savoir
+            // qu'un média existe n'aide pas à lui envoyer un titre. Même
+            // logique que le filtre montant/échéance du bot Subventions.
+            if ( empty( $p['soumission'] ) ) {
+                return null;
+            }
+
+            $details = [ 'Comment soumettre' => (string) $p['soumission'] ];
+            if ( ! empty( $p['genres'] ) ) {
+                $details['Genres couverts'] = (string) $p['genres'];
+            }
+            if ( ! empty( $p['premieres'] ) ) {
+                $details['Premières'] = (string) $p['premieres'];
+            }
+            $details['Source lue'] = $src['nom'];
+
+            $pertinent = ! isset( $p['pertinent'] ) || (bool) $p['pertinent'];
+
+            return [
+                'id'         => sanitize_title( $p['nom'] ),
+                'titre'      => (string) $p['nom'],
+                'sous_titre' => ! empty( $p['type'] ) ? (string) $p['type'] : $src['nom'],
+                'url'        => $src['url'],
+                'echeance'   => null,
+                'statut'     => $pertinent ? 'à vérifier' : 'hors critères',
+                'motif'      => ! empty( $p['motif'] ) ? (string) $p['motif'] : '',
+                'suivi'      => 'aucune',
+                'nouveau'    => true,
+                'details'    => $details,
+                'notes'      => '',
+            ];
+        },
+        'md_bot_promo',
+        function ( $entrees, $lues, $vides ) {
+            $r = sprintf( '%d plateforme(s) retenue(s) sur %d page(s) lue(s).', count( $entrees ), $lues );
+            if ( $vides ) {
+                $r .= sprintf( ' %d mention(s) sans modalité de soumission écartée(s).', $vides );
+            }
+            return $r;
+        }
+    );
+}
+
 function md_bots_handle_run() {
     if ( ! current_user_can( MD_BOTS_CAP ) ) {
         wp_die( esc_html__( 'Accès refusé.', 'mango-dragon' ) );
     }
     check_admin_referer( 'md_bots_run' );
 
-    $res = md_bots_run_subventions();
+    // Le bot à lancer est celui de la page d'où vient le formulaire.
+    $slug     = isset( $_POST['md_bot'] ) ? sanitize_key( wp_unslash( $_POST['md_bot'] ) ) : 'subventions';
+    $fonction = 'md_bots_run_' . $slug;
+
+    if ( ! function_exists( $fonction ) ) {
+        wp_die( esc_html__( 'Bot inconnu.', 'mango-dragon' ) );
+    }
+
+    $res = call_user_func( $fonction );
 
     wp_safe_redirect( add_query_arg( [
-        'page'       => 'md-bots-subventions',
+        'page'       => 'md-bots-' . $slug,
         'md_bot_msg' => rawurlencode( $res['message'] ),
         'md_bot_ok'  => $res['ok'] ? '1' : '0',
     ], admin_url( 'admin.php' ) ) );
