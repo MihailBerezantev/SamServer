@@ -183,6 +183,28 @@ function md_acf_mirror_to_meta( $post_id ) {
  */
 add_action( 'acf/init', 'md_acf_register_load_value_fallbacks' );
 
+/**
+ * Should the legacy _md_* fallback run for this field?
+ *
+ * Only when ACF has never written its own meta row for it. As soon as that row
+ * exists — even holding an empty string — the value the user typed is
+ * authoritative, and an empty field means "deliberately cleared".
+ *
+ * Without this check the fallback treats "empty" as "not migrated yet" and
+ * restores the old _md_* value. That made clearing a field impossible: the
+ * mirror in md_acf_mirror_to_meta() calls get_field(), get_field() applies
+ * these very filters, and the fallback handed the old value straight back to
+ * the mirror, which wrote it again. Replacing a value worked (non-empty values
+ * return before reaching the fallback); only clearing was broken.
+ */
+function md_acf_should_fallback( $post_id, $acf_name ) {
+    // Non-post contexts (options pages, users, terms) are never migrated.
+    if ( ! is_numeric( $post_id ) ) {
+        return false;
+    }
+    return ! metadata_exists( 'post', (int) $post_id, $acf_name );
+}
+
 function md_acf_register_load_value_fallbacks() {
 
     // -----------------------------------------------------------------------
@@ -200,8 +222,11 @@ function md_acf_register_load_value_fallbacks() {
     foreach ( $artiste_map as $acf_name => $meta_key ) {
         add_filter(
             'acf/load_value/name=' . $acf_name,
-            function( $value, $post_id, $field ) use ( $meta_key ) {
+            function( $value, $post_id, $field ) use ( $acf_name, $meta_key ) {
                 if ( $value !== null && $value !== false && $value !== '' ) {
+                    return $value;
+                }
+                if ( ! md_acf_should_fallback( $post_id, $acf_name ) ) {
                     return $value;
                 }
                 $fallback = get_post_meta( $post_id, $meta_key, true );
@@ -237,8 +262,11 @@ function md_acf_register_load_value_fallbacks() {
     foreach ( $release_map as $acf_name => $meta_key ) {
         add_filter(
             'acf/load_value/name=' . $acf_name,
-            function( $value, $post_id, $field ) use ( $meta_key ) {
+            function( $value, $post_id, $field ) use ( $acf_name, $meta_key ) {
                 if ( $value !== null && $value !== false && $value !== '' ) {
+                    return $value;
+                }
+                if ( ! md_acf_should_fallback( $post_id, $acf_name ) ) {
                     return $value;
                 }
                 return get_post_meta( $post_id, $meta_key, true );
@@ -255,6 +283,9 @@ function md_acf_register_load_value_fallbacks() {
         'acf/load_value/name=mdacf_artist_ids',
         function( $value, $post_id, $field ) {
             if ( ! empty( $value ) ) {
+                return $value;
+            }
+            if ( ! md_acf_should_fallback( $post_id, 'mdacf_artist_ids' ) ) {
                 return $value;
             }
             $ids = get_post_meta( $post_id, '_md_artist_ids', true );
