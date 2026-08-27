@@ -7,7 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'MD_VERSION', '4.9.11' );
+define( 'MD_VERSION', '4.9.12' );
 define( 'MD_DIR', get_template_directory() );
 define( 'MD_URI', get_template_directory_uri() );
 
@@ -25,6 +25,7 @@ require_once MD_DIR . '/inc/visual-gallery.php'; // Visuals: collection de photo
 require_once MD_DIR . '/inc/submissions.php';   // stockage des demandes reÃ§ues (CPT md_submission)
 require_once MD_DIR . '/inc/ajax-handlers.php';
 require_once MD_DIR . '/inc/inbox.php';         // BoÃ®te de rÃ©ception (wp-admin > E-mails)
+require_once MD_DIR . '/inc/bots.php';         // Bots : pages admin, réservées aux administrateurs
 require_once MD_DIR . '/inc/video-embeds.php'; // Vidéos YouTube des artistes
 require_once MD_DIR . '/inc/legacy-urls.php'; // Redirections 301 des anciennes URLs françaises
 require_once MD_DIR . '/inc/blocks.php';

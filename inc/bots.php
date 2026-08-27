@@ -1,0 +1,294 @@
+<?php
+/**
+ * Bots — pages d'administration réservées aux administrateurs.
+ *
+ * Les bots sont des agents de recherche exécutés hors du site (skills Claude
+ * Code sur le poste de l'utilisateur). Ils déposent leurs résultats dans une
+ * option WordPress via WP-CLI, et ce module les affiche dans wp-admin.
+ *
+ * Le site ne lance rien et n'appelle aucun service externe : il ne fait que
+ * présenter des données déjà collectées. Rien n'est exposé publiquement — tout
+ * passe par la capacité manage_options.
+ *
+ * Format d'une option de bot (JSON) :
+ *   {
+ *     "execute_le": "AAAA-MM-JJ",
+ *     "resume": "phrase de synthèse",
+ *     "entrees": [
+ *       {
+ *         "id": "slug-stable", "titre": "...", "sous_titre": "...",
+ *         "url": "https://...", "echeance": "AAAA-MM-JJ" | null,
+ *         "statut": "à déposer" | "à vérifier" | "hors critères",
+ *         "motif": "...", "suivi": "...", "nouveau": true|false,
+ *         "details": { "Libellé": "valeur" }, "notes": "..."
+ *       }
+ *     ]
+ *   }
+ */
+
+if ( ! defined( 'MD_BOTS_CAP' ) ) {
+    define( 'MD_BOTS_CAP', 'manage_options' );
+}
+
+/**
+ * Bots déclarés. Ajouter une entrée suffit à créer sa page.
+ *
+ * @return array
+ */
+function md_bots_registry() {
+    return [
+        'subventions' => [
+            'titre'  => 'Subventions',
+            'menu'   => 'Subventions',
+            'option' => 'md_bot_subventions',
+            'vide'   => 'Aucune recherche effectuée pour le moment. Lance /mango-subventions depuis Claude Code.',
+        ],
+    ];
+}
+
+/**
+ * Menu « Bots » et une page par bot déclaré.
+ */
+function md_bots_menu() {
+    add_menu_page(
+        'Bots',
+        'Bots',
+        MD_BOTS_CAP,
+        'md-bots',
+        'md_bots_page_router',
+        'dashicons-search',
+        27
+    );
+
+    foreach ( md_bots_registry() as $slug => $bot ) {
+        add_submenu_page(
+            'md-bots',
+            $bot['titre'],
+            $bot['menu'],
+            MD_BOTS_CAP,
+            'md-bots-' . $slug,
+            'md_bots_page_router'
+        );
+    }
+
+    // Retire l'entrée dupliquée que WordPress crée pour la page parente.
+    remove_submenu_page( 'md-bots', 'md-bots' );
+}
+add_action( 'admin_menu', 'md_bots_menu' );
+
+/**
+ * Route la page courante vers le bot correspondant.
+ *
+ * Le contrôle de capacité est refait ici : celui d'add_menu_page ne masque que
+ * le lien du menu, il n'empêche pas d'atteindre la page par son URL.
+ */
+function md_bots_page_router() {
+    if ( ! current_user_can( MD_BOTS_CAP ) ) {
+        wp_die( esc_html__( 'Accès refusé.', 'mango-dragon' ) );
+    }
+
+    $page     = isset( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
+    $slug     = str_replace( 'md-bots-', '', $page );
+    $registry = md_bots_registry();
+
+    if ( ! isset( $registry[ $slug ] ) ) {
+        $slug = array_key_first( $registry );
+    }
+
+    md_bots_render( $slug, $registry[ $slug ] );
+}
+
+/**
+ * Décode l'option d'un bot en vérifiant sa forme.
+ *
+ * Les données viennent d'un processus externe : on ne présume rien de leur
+ * structure et on ignore ce qui n'est pas conforme plutôt que d'émettre des
+ * avertissements PHP dans l'administration.
+ *
+ * @return array
+ */
+function md_bots_data( $option_name ) {
+    $vide = [
+        'execute_le' => '',
+        'resume'     => '',
+        'entrees'    => [],
+    ];
+
+    $raw = get_option( $option_name );
+    if ( empty( $raw ) ) {
+        return $vide;
+    }
+
+    $data = is_array( $raw ) ? $raw : json_decode( (string) $raw, true );
+    if ( ! is_array( $data ) ) {
+        return $vide;
+    }
+
+    return [
+        'execute_le' => isset( $data['execute_le'] ) ? (string) $data['execute_le'] : '',
+        'resume'     => isset( $data['resume'] ) ? (string) $data['resume'] : '',
+        'entrees'    => ( isset( $data['entrees'] ) && is_array( $data['entrees'] ) ) ? $data['entrees'] : [],
+    ];
+}
+
+/**
+ * Tri : échéance la plus proche d'abord, sans échéance ensuite,
+ * hors critères en dernier.
+ */
+function md_bots_sort( array $entrees ) {
+    usort( $entrees, function ( $a, $b ) {
+        $hors_a = ( isset( $a['statut'] ) && 'hors critères' === $a['statut'] ) ? 1 : 0;
+        $hors_b = ( isset( $b['statut'] ) && 'hors critères' === $b['statut'] ) ? 1 : 0;
+
+        if ( $hors_a !== $hors_b ) {
+            return $hors_a - $hors_b;
+        }
+
+        $ech_a = empty( $a['echeance'] ) ? '9999-99-99' : (string) $a['echeance'];
+        $ech_b = empty( $b['echeance'] ) ? '9999-99-99' : (string) $b['echeance'];
+
+        return strcmp( $ech_a, $ech_b );
+    } );
+
+    return $entrees;
+}
+
+/**
+ * Nombre de jours avant une échéance, ou null si absente ou illisible.
+ */
+function md_bots_jours_restants( $echeance ) {
+    if ( empty( $echeance ) ) {
+        return null;
+    }
+
+    $ts = strtotime( (string) $echeance );
+    if ( false === $ts ) {
+        return null;
+    }
+
+    return (int) floor( ( $ts - current_time( 'timestamp' ) ) / DAY_IN_SECONDS );
+}
+
+/**
+ * Rendu d'une page de bot.
+ */
+function md_bots_render( $slug, array $bot ) {
+    $data    = md_bots_data( $bot['option'] );
+    $entrees = md_bots_sort( $data['entrees'] );
+    ?>
+    <div class="wrap md-bots">
+        <h1><?php echo esc_html( $bot['titre'] ); ?></h1>
+
+        <?php if ( '' !== $data['execute_le'] ) : ?>
+            <p class="description">
+                Dernière recherche : <strong><?php echo esc_html( $data['execute_le'] ); ?></strong>
+                — <?php echo esc_html( (string) count( $entrees ) ); ?> résultat(s)
+            </p>
+        <?php endif; ?>
+
+        <?php if ( '' !== $data['resume'] ) : ?>
+            <div class="notice notice-info inline"><p><?php echo esc_html( $data['resume'] ); ?></p></div>
+        <?php endif; ?>
+
+        <?php if ( empty( $entrees ) ) : ?>
+            <div class="notice notice-warning inline"><p><?php echo esc_html( $bot['vide'] ); ?></p></div>
+        </div>
+            <?php
+            return;
+        endif;
+        ?>
+
+        <table class="widefat striped">
+            <thead>
+                <tr>
+                    <th style="width:28%">Intitulé</th>
+                    <th style="width:14%">Échéance</th>
+                    <th style="width:12%">Statut</th>
+                    <th>Détails</th>
+                </tr>
+            </thead>
+            <tbody>
+            <?php
+            foreach ( $entrees as $e ) :
+                $titre   = isset( $e['titre'] ) ? (string) $e['titre'] : '(sans titre)';
+                $sous    = isset( $e['sous_titre'] ) ? (string) $e['sous_titre'] : '';
+                $url     = isset( $e['url'] ) ? (string) $e['url'] : '';
+                $statut  = isset( $e['statut'] ) ? (string) $e['statut'] : '';
+                $echance = isset( $e['echeance'] ) ? $e['echeance'] : null;
+                $jours   = md_bots_jours_restants( $echance );
+                $details = ( isset( $e['details'] ) && is_array( $e['details'] ) ) ? $e['details'] : [];
+                ?>
+                <tr>
+                    <td>
+                        <strong>
+                            <?php if ( '' !== $url ) : ?>
+                                <a href="<?php echo esc_url( $url ); ?>" target="_blank" rel="noopener noreferrer"><?php echo esc_html( $titre ); ?></a>
+                            <?php else : ?>
+                                <?php echo esc_html( $titre ); ?>
+                            <?php endif; ?>
+                        </strong>
+                        <?php if ( ! empty( $e['nouveau'] ) ) : ?>
+                            <span class="md-bots__badge">nouveau</span>
+                        <?php endif; ?>
+                        <?php if ( '' !== $sous ) : ?>
+                            <div class="description"><?php echo esc_html( $sous ); ?></div>
+                        <?php endif; ?>
+                    </td>
+                    <td>
+                        <?php if ( ! empty( $echance ) ) : ?>
+                            <?php echo esc_html( (string) $echance ); ?>
+                            <?php if ( null !== $jours ) : ?>
+                                <div class="description">
+                                    <?php
+                                    echo $jours < 0
+                                        ? esc_html( 'dépassée' )
+                                        : esc_html( sprintf( 'dans %d jour(s)', $jours ) );
+                                    ?>
+                                </div>
+                            <?php endif; ?>
+                        <?php else : ?>
+                            <span class="description">non publiée</span>
+                        <?php endif; ?>
+                    </td>
+                    <td>
+                        <?php echo esc_html( $statut ); ?>
+                        <?php if ( ! empty( $e['suivi'] ) && 'aucune' !== $e['suivi'] ) : ?>
+                            <div class="description"><?php echo esc_html( (string) $e['suivi'] ); ?></div>
+                        <?php endif; ?>
+                    </td>
+                    <td>
+                        <?php if ( ! empty( $e['motif'] ) ) : ?>
+                            <p><em><?php echo esc_html( (string) $e['motif'] ); ?></em></p>
+                        <?php endif; ?>
+                        <?php if ( ! empty( $details ) ) : ?>
+                            <ul style="margin:0">
+                                <?php foreach ( $details as $cle => $valeur ) : ?>
+                                    <li>
+                                        <strong><?php echo esc_html( (string) $cle ); ?> :</strong>
+                                        <?php echo esc_html( is_scalar( $valeur ) ? (string) $valeur : (string) wp_json_encode( $valeur ) ); ?>
+                                    </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        <?php endif; ?>
+                        <?php if ( ! empty( $e['notes'] ) ) : ?>
+                            <p class="description"><?php echo esc_html( (string) $e['notes'] ); ?></p>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+    <style>
+        .md-bots__badge {
+            display: inline-block;
+            margin-left: 6px;
+            padding: 1px 6px;
+            font-size: 11px;
+            border-radius: 2px;
+            background: #135e96;
+            color: #fff;
+        }
+    </style>
+    <?php
+}
