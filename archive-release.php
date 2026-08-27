@@ -19,11 +19,23 @@ $releases = get_posts( [
 <section class="section">
     <div class="container">
         <?php
+        // Ligne « Artist » restreinte aux artistes qui ont réellement des
+        // releases : lister tout le catalogue produirait des pastilles ne
+        // filtrant rien, comme sur la page Visuals.
+        $md_rel_artist_ids = [];
+        foreach ( $releases as $md_r ) {
+            $md_ids = get_post_meta( $md_r->ID, '_md_artist_ids', true );
+            if ( is_array( $md_ids ) ) {
+                $md_rel_artist_ids = array_merge( $md_rel_artist_ids, $md_ids );
+            }
+        }
+        $md_rel_artist_ids = array_values( array_unique( array_map( 'intval', $md_rel_artist_ids ) ) );
+
         // Ordre d'affichage des lignes de filtres : Genre, Artist, Type, Sort.
         $filter_config = [
             'rows' => [
                 [ 'type' => 'taxonomy', 'taxonomy' => 'genre',        'label' => 'Genre' ],
-                [ 'type' => 'artists',                                'label' => 'Artist' ],
+                [ 'type' => 'artists',                                'label' => 'Artist', 'ids' => $md_rel_artist_ids ],
                 [ 'type' => 'taxonomy', 'taxonomy' => 'release_type', 'label' => 'Type' ],
                 [ 'type' => 'sort',                                   'label' => 'Sort' ],
             ],
