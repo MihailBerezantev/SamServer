@@ -74,5 +74,52 @@ function md_register_taxonomies() {
         'show_in_rest' => true,
         'rewrite'      => [ 'slug' => 'type-artiste' ],
     ] );
+
+    // ======================================================================
+    // Type de visuel (graphic design, texture, vjing, 3D, photo, collage…)
+    // ======================================================================
+    if ( ! md_cptui_owns_taxonomy( 'visual_type' ) )
+    register_taxonomy( 'visual_type', [ 'visual' ], [
+        'labels' => [
+            'name'          => 'Types de visuel',
+            'singular_name' => 'Type de visuel',
+            'search_items'  => 'Rechercher',
+            'all_items'     => 'Tous les types',
+            'edit_item'     => 'Modifier le type',
+            'update_item'   => 'Mettre à jour',
+            'add_new_item'  => 'Ajouter un type',
+            'new_item_name' => 'Nom du nouveau type',
+            'menu_name'     => 'Types de visuel',
+        ],
+        // Aligné sur la taxonomie réellement active, déclarée via CPT UI :
+        // une liste plate de types, sans hiérarchie.
+        'hierarchical' => false,
+        'public'       => true,
+        'show_in_rest' => true,
+        'rewrite'      => [ 'slug' => 'type-visuel' ],
+    ] );
 }
 add_action( 'init', 'md_register_taxonomies' );
+
+/**
+ * Amorce les types de visuel par défaut, une seule fois.
+ *
+ * L'option sert de garde : sans elle, un type supprimé volontairement dans le
+ * back-office réapparaîtrait à chaque chargement. La liste n'est qu'un point de
+ * départ — les types se gèrent ensuite depuis l'administration.
+ */
+function md_seed_visual_types() {
+    if ( get_option( 'md_visual_types_seeded' ) ) {
+        return;
+    }
+    if ( ! taxonomy_exists( 'visual_type' ) ) {
+        return;
+    }
+    foreach ( [ 'Graphic Design', 'Texture', 'VJing', '3D', 'Photo', 'Collage' ] as $name ) {
+        if ( ! term_exists( $name, 'visual_type' ) ) {
+            wp_insert_term( $name, 'visual_type' );
+        }
+    }
+    update_option( 'md_visual_types_seeded', 1 );
+}
+add_action( 'init', 'md_seed_visual_types', 20 );

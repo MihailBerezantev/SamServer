@@ -34,8 +34,31 @@ $md_visuals = get_posts( [
 
 <section class="section visuals-section">
 	<div class="container">
+		<?php
+		// Ligne « Artist » restreinte aux artistes qui ont réellement des
+		// visuels : lister tout le catalogue produirait des pastilles ne
+		// filtrant rien. Ordre demandé : Artist puis Type.
+		$md_vis_artist_ids = [];
+		foreach ( $md_visuals as $md_v ) {
+			$md_ids = function_exists( 'get_field' ) ? get_field( 'mdvis_artist_ids', $md_v->ID ) : [];
+			if ( is_array( $md_ids ) ) {
+				$md_vis_artist_ids = array_merge( $md_vis_artist_ids, $md_ids );
+			}
+		}
+		$md_vis_artist_ids = array_values( array_unique( array_map( 'intval', $md_vis_artist_ids ) ) );
+
+		$filter_config = [
+			'rows' => [
+				[ 'type' => 'artists',                               'label' => 'Artist', 'ids' => $md_vis_artist_ids ],
+				[ 'type' => 'taxonomy', 'taxonomy' => 'visual_type', 'label' => 'Type' ],
+			],
+		];
+		set_query_var( 'filter_config', $filter_config );
+		get_template_part( 'template-parts/filter', 'bar' );
+		?>
+
 		<?php if ( ! empty( $md_visuals ) ) : ?>
-		<div class="cards-grid">
+		<div class="cards-grid" id="cards-grid">
 			<?php foreach ( $md_visuals as $md_v ) :
 				set_query_var( 'visual', $md_v );
 				get_template_part( 'template-parts/card', 'visual' );

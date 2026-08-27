@@ -49,6 +49,7 @@
         case 'release_type': return 'data-release-type';
         case 'artist_type':  return 'data-type';
         case 'artists':      return 'data-artists';
+        case 'visual_type':  return 'data-visual-type';
         default:             return 'data-' + tax;
       }
     }

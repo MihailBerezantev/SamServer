@@ -158,20 +158,29 @@
 }
 
 /* --- Filter Bar --- */
+/* Une ligne par catégorie de filtre.
+
+   La barre était en flex-wrap horizontal : tous les groupes s'enchaînaient sur
+   la même ligne et se repliaient là où la place manquait, sans rapport avec les
+   catégories. En colonne, chaque groupe occupe sa propre ligne, et l'ordre
+   d'affichage est celui déclaré dans $filter_config['rows']. */
 .filter-bar {
     display: flex;
-    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: flex-start;
     gap: var(--space-sm);
     margin-bottom: var(--space-section);
 }
 
 .filter-group {
     display: flex;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: var(--space-xs);
-    align-items: center;
+    align-items: baseline;
+    width: 100%;
 }
 
+/* Largeur fixe : aligne les pastilles d'une ligne à l'autre. */
 .filter-group__label {
     font-family: var(--font-label);
     font-size: 0.7rem;
@@ -179,6 +188,19 @@
     letter-spacing: 0.12em;
     color: var(--color-text-muted);
     margin-right: var(--space-xs);
+    flex: 0 0 auto;
+    min-width: 4.5rem;
+}
+
+/* Les pastilles se replient dans leur propre ligne, sans déborder sur la
+   catégorie suivante. */
+.filter-group__pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+    align-items: center;
+    flex: 1 1 auto;
+    min-width: 0;
 }
 
 .filter-pill {
