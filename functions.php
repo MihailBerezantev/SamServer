@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 /**
  * Mango Dragon International â€” Theme Functions
  */
@@ -7,7 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'MD_VERSION', '4.9.7' );
+define( 'MD_VERSION', '4.9.8' );
 define( 'MD_DIR', get_template_directory() );
 define( 'MD_URI', get_template_directory_uri() );
 
@@ -25,6 +25,7 @@ require_once MD_DIR . '/inc/visual-gallery.php'; // Visuals: collection de photo
 require_once MD_DIR . '/inc/submissions.php';   // stockage des demandes reÃ§ues (CPT md_submission)
 require_once MD_DIR . '/inc/ajax-handlers.php';
 require_once MD_DIR . '/inc/inbox.php';         // BoÃ®te de rÃ©ception (wp-admin > E-mails)
+require_once MD_DIR . '/inc/media-folders.php'; // Médiathèque : vue « Non classés »
 require_once MD_DIR . '/inc/blocks.php';
 require_once MD_DIR . '/inc/test-data.php';
 
