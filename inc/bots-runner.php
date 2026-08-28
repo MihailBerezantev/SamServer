@@ -274,7 +274,7 @@ function md_bots_links_from( $url, $max = 4, $mots = null ) {
     // — les fichiers et les points d'entrée d'API, qui ne sont pas des pages ;
     // — les aides NON culturelles, que « aide » et « demande » attrapaient en
     //   masse sur les sites d'administration (logement, école, social).
-    $exclus = '~(\.(pdf|jpe?g|png|gif|svg|css|js|zip|docx?)($|\?)'
+    $exclus = '~(\.(pdf|jpe?g|png|gif|svg|webp|avif|css|js|zip|docx?)($|\?)'
         . '|wp-json|/feed|oembed|/api/'
         . '|logement|scolaire|sociale?[-/]|chomage|assurance|impot|handicap|sante|petite-enfance)~i';
 
@@ -775,13 +775,17 @@ function md_bots_sources_disquaires() {
         [ 'nom' => 'Redeye Worldwide',                'url' => 'https://www.redeyeworldwide.com/', 'index' => true ],
         [ 'nom' => 'Record Stores Love — annuaire',   'url' => 'https://recordstores.love/', 'index' => true ],
 
-        // Suisse. Un premier pressage se place plus facilement en dépôt-vente
-        // chez trois disquaires romands qu'auprès d'un distributeur néerlandais.
-        // Les autres enseignes suisses envisagées n'ont pas de site joignable :
-        // l'annuaire ci-dessous sert justement à les découvrir sans les deviner.
-        [ 'nom' => 'Bongo Joe — Genève',              'url' => 'https://bongojoe.ch/', 'index' => true ],
-        [ 'nom' => 'Plattfon — Bâle',                 'url' => 'https://plattfon.ch/', 'index' => true ],
-        [ 'nom' => 'Disquaires suisses — annuaire',   'url' => 'https://recordstores.love/switzerland' ],
+        // PAS de disquaires suisses ici, et ce n'est pas un oubli.
+        //
+        // Bongo Joe (Genève), Plattfon (Bâle) et l'annuaire des disquaires
+        // suisses ont été ajoutés puis retirés après mesure : les deux
+        // boutiques tournent sur des sites dont le HTML servi ne contient que
+        // la navigation et le bandeau cookies, et l'annuaire est une carte
+        // entièrement JavaScript — 40 caractères extraits. Aucun n'a produit
+        // la moindre fiche, tout en coûtant vingt secondes chacun.
+        //
+        // Pour les disquaires romands, un bot n'apporte rien : leurs conditions
+        // de dépôt-vente ne sont pas publiées, elles se demandent de vive voix.
     ];
 }
 
@@ -908,12 +912,18 @@ function md_bots_run_disquaires() {
  */
 function md_bots_sources_artistes() {
     return [
-        [ 'nom' => 'Antigel — Genève',            'url' => 'https://www.antigel.ch/', 'index' => true ],
-        [ 'nom' => 'Electron Festival — Genève',  'url' => 'https://electronfestival.ch/', 'index' => true ],
-        [ 'nom' => 'Les Digitales',               'url' => 'https://www.lesdigitales.ch/', 'index' => true ],
-        [ 'nom' => 'Mx3 — portail suisse',        'url' => 'https://mx3.ch/genres' ],
-        [ 'nom' => 'Bandcamp Daily — électronique','url' => 'https://daily.bandcamp.com/genre/electronic' ],
-        [ 'nom' => 'Bandcamp Daily — best of',    'url' => 'https://daily.bandcamp.com/best-electronic' ],
+        // Écartés après exécution réelle : Electron Festival renvoie 403 aux
+        // robots, Les Digitales dépasse deux minutes sans répondre, et
+        // daily.bandcamp.com/genre/electronic renvoie 404.
+        //
+        // Antigel est conservé mais ne donnera plus grand-chose : c'est un
+        // festival pluridisciplinaire, sa programmation ne mentionne aucun
+        // genre, et le filtre l'exige désormais. Ses 181 noms — Miossec,
+        // Odezenne, Baxter Dury — étaient du bruit pur.
+        [ 'nom' => 'Antigel — Genève',             'url' => 'https://www.antigel.ch/', 'index' => true ],
+        [ 'nom' => 'Mx3 — portail suisse',         'url' => 'https://mx3.ch/genres' ],
+        [ 'nom' => 'Bandcamp Daily — best of',     'url' => 'https://daily.bandcamp.com/best-electronic' ],
+        [ 'nom' => 'Bandcamp Daily — sélections',  'url' => 'https://daily.bandcamp.com/lists', 'index' => true ],
     ];
 }
 
@@ -961,7 +971,9 @@ function md_bots_extract_artistes( $source, $texte ) {
  * Lance le repérage d'artistes émergents.
  */
 function md_bots_run_artistes() {
-    $mots = '~(programm|line-?up|artist|edition|festival|archive|20[0-9]{2})~i';
+    // « 20[0-9]{2} » a ete retire : il matchait les dates dans les noms de
+    // fichiers, et le bot telechargeait des images .webp comme des pages.
+    $mots = '~(programm|line-?up|artistes?/|edition|festival|archive)~i';
 
     return md_bots_run_generic(
         md_bots_expand_sources( md_bots_sources_artistes(), $mots ),
@@ -971,9 +983,27 @@ function md_bots_run_artistes() {
                 return null;
             }
 
-            // Un nom sans le moindre contexte ne vaut rien : impossible de
-            // savoir si c'est un artiste, une salle ou une rubrique mal lue.
-            if ( empty( $a['genre'] ) && empty( $a['provenance'] ) && empty( $a['contexte'] ) ) {
+            // Filtre sur les genres du label cherchés dans le texte, plutôt que
+            // sur un champ « genre » rempli.
+            //
+            // Deux essais précédents ont échoué. Accepter genre OU provenance
+            // OU contexte ne filtrait rien : le modèle remplit toujours le
+            // contexte, et le bot recopiait la programmation entière d'Antigel
+            // — 283 noms dont Miossec et Odezenne. Exiger un genre explicite
+            // filtrait trop : une page qui liste vingt artistes indique
+            // rarement le genre de chacun, et il ne restait qu'une fiche.
+            //
+            // Chercher les genres du label dans tout ce que le modèle rapporte
+            // attrape « son disque de jungle » même quand le champ genre est
+            // vide, et rejette la chanson française même quand il est rempli.
+            $matiere = strtolower(
+                ( $a['genre'] ?? '' ) . ' ' . ( $a['contexte'] ?? '' ) . ' ' . ( $a['nom'] ?? '' )
+            );
+
+            $genres = 'jungle|drum ?(and|&|n\'?) ?bass|d ?n ?b|dubstep|dub\b|bass music|breakbeat'
+                . '|ambient|noise|experimental|expérimental|électronique|electronic|techno|breakcore|footwork|idm';
+
+            if ( ! preg_match( '~' . $genres . '~i', $matiere ) ) {
                 return null;
             }
 
