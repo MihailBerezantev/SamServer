@@ -60,13 +60,26 @@ function md_bots_registry() {
             'colonne2' => null,
             'vide'     => 'Aucune recherche effectuée pour le moment. Clique sur « Lancer la recherche ».',
         ],
-        'artistes' => [
-            'titre'    => 'Artistes émergents',
-            'menu'     => 'Artistes émergents',
-            'option'   => 'md_bot_artistes',
+        'booking' => [
+            'titre'    => 'Booking & visibilité',
+            'menu'     => 'Booking',
+            'option'   => 'md_bot_booking',
             'colonne2' => null,
             'vide'     => 'Aucune recherche effectuée pour le moment. Clique sur « Lancer la recherche ».',
         ],
+
+        // Le bot « Artistes émergents » n'est délibérément PAS déclaré ici.
+        //
+        // Son runner existe toujours (md_bots_run_artistes) mais il ne remonte
+        // qu'un ou deux noms par exécution : les pages qui listent beaucoup
+        // d'artistes n'indiquent pas leur genre, et celles qui décrivent un
+        // genre ne couvrent qu'un artiste ou deux. Trois filtres successifs ont
+        // buté sur cet écart.
+        //
+        // Un onglet affichant un seul artiste donnerait l'illusion d'une veille
+        // qui n'a pas lieu — pire qu'un onglet absent. Le rétablir suppose de
+        // descendre de deux niveaux (sélections → articles → artistes), au prix
+        // d'une exécution bien plus longue.
     ];
 }
 

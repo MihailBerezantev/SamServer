@@ -1046,6 +1046,131 @@ function md_bots_run_artistes() {
     );
 }
 
+// ==========================================================================
+// Bot « Booking & visibilité »
+// ==========================================================================
+
+/**
+ * Salles et réseaux susceptibles de programmer les artistes du label.
+ *
+ * Texte réellement extrait vérifié avant de retenir chaque source — la leçon
+ * du bot Artistes, où des pages entièrement rendues en JavaScript avaient été
+ * choisies sans mesure. Bad Bonn a été écarté à ce titre : 69 caractères
+ * servis, aucune information exploitable.
+ *
+ * Priorité au terrain atteignable : quatre salles romandes, deux alémaniques,
+ * et la fédération suisse des clubs, qui en recense d'autres.
+ */
+function md_bots_sources_booking() {
+    return [
+        [ 'nom' => 'Cave12 — Genève',       'url' => 'https://cave12.org/', 'index' => true ],
+        [ 'nom' => 'L\'Usine — Genève',     'url' => 'https://usine.ch/', 'index' => true ],
+        [ 'nom' => 'Le Garage',             'url' => 'https://www.legarage.ch/', 'index' => true ],
+        [ 'nom' => 'Dachstock — Berne',     'url' => 'https://www.dachstock.ch/', 'index' => true ],
+        [ 'nom' => 'Rote Fabrik — Zurich',  'url' => 'https://rotefabrik.ch/', 'index' => true ],
+        [ 'nom' => 'Petzi — clubs suisses', 'url' => 'https://www.petzi.ch/', 'index' => true ],
+    ];
+}
+
+/**
+ * Extrait les modalités de démarchage décrites dans le texte fourni.
+ *
+ * @return array|WP_Error
+ */
+function md_bots_extract_booking( $source, $texte ) {
+    $system = "Tu es un assistant qui EXTRAIT des informations d'un texte fourni. "
+        . "Tu ne réponds jamais de mémoire. Si une information n'apparaît pas dans le texte, tu écris null. "
+        . "Tu réponds uniquement par du JSON valide, sans commentaire ni balise markdown.";
+
+    $user = "Voici le texte d'une page de salle de concert, de club ou de réseau de lieux.\n\n"
+        . "Contexte : label associatif genevois de musiques électroniques et expérimentales "
+        . "(drum & bass, jungle, dubstep, dub, bass music, ambient, noise). Il cherche où faire jouer "
+        . "ses artistes et à qui envoyer une proposition.\n\n"
+        . "Extrais ce que le texte dit sur les lieux et le démarchage :\n"
+        . '{"lieux":[{"nom":"...","ville":"ou null","programmation":"types de musique programmes, ou null",'
+        . '"contact":"e-mail, formulaire ou page de contact indiquee dans le texte, ou null",'
+        . '"demarche":"ce que le texte dit sur l\'envoi d\'une proposition, ou null",'
+        . '"pertinent":true|false,"motif":"si non pertinent, pourquoi"}]}' . "\n\n"
+        . "Règles strictes :\n"
+        . "- N'invente aucune adresse e-mail : recopie celle du texte ou écris null.\n"
+        . "- contact UNIQUEMENT si le texte indique réellement comment les joindre.\n"
+        . "- pertinent = false si le lieu ne programme visiblement pas ces musiques.\n"
+        . "- Rien de tel dans le texte ? Réponds {\"lieux\":[]}.\n\n"
+        . "SOURCE : " . $source . "\n\n=== TEXTE ===\n" . $texte;
+
+    $reponse = md_omniroute_complete( $system, $user );
+    if ( is_wp_error( $reponse ) ) {
+        return $reponse;
+    }
+
+    $data = md_json_from_reply( $reponse );
+    if ( null === $data || ! isset( $data['lieux'] ) || ! is_array( $data['lieux'] ) ) {
+        return new WP_Error( 'extract_format', 'Le modèle n\'a pas renvoyé de JSON exploitable.' );
+    }
+
+    return $data['lieux'];
+}
+
+/**
+ * Lance la recherche de lieux et de contacts de booking.
+ */
+function md_bots_run_booking() {
+    $mots = '~(contact|booking|programm|propos|about|kontakt|infos?)~i';
+
+    return md_bots_run_generic(
+        md_bots_expand_sources( md_bots_sources_booking(), $mots ),
+        'md_bots_extract_booking',
+        function ( $l, $src ) {
+            if ( empty( $l['nom'] ) ) {
+                return null;
+            }
+
+            // Sans contact ni démarche indiquée, la fiche ne permet pas d'agir.
+            // Même critère que le bot Disquaires : connaître l'existence d'une
+            // salle n'apprend pas à qui envoyer une proposition.
+            if ( empty( $l['contact'] ) && empty( $l['demarche'] ) ) {
+                return null;
+            }
+
+            $details = [];
+            if ( ! empty( $l['contact'] ) ) {
+                $details['Contact'] = (string) $l['contact'];
+            }
+            if ( ! empty( $l['demarche'] ) ) {
+                $details['Démarche'] = (string) $l['demarche'];
+            }
+            if ( ! empty( $l['programmation'] ) ) {
+                $details['Programmation'] = (string) $l['programmation'];
+            }
+            $details['Source lue'] = $src['nom'];
+
+            $pertinent = ! isset( $l['pertinent'] ) || (bool) $l['pertinent'];
+
+            return [
+                'id'         => sanitize_title( $l['nom'] ),
+                'titre'      => (string) $l['nom'],
+                'sous_titre' => ! empty( $l['ville'] ) ? (string) $l['ville'] : $src['nom'],
+                'url'        => $src['url'],
+                'echeance'   => null,
+                'statut'     => $pertinent ? 'à vérifier' : 'hors critères',
+                'motif'      => ! empty( $l['motif'] ) ? (string) $l['motif'] : '',
+                'suivi'      => 'aucune',
+                'nouveau'    => true,
+                'details'    => $details,
+                'notes'      => '',
+            ];
+        },
+        'md_bot_booking',
+        function ( $entrees, $lues, $vides ) {
+            $r = sprintf( '%d lieu(x) retenu(s) sur %d page(s) lue(s).', count( $entrees ), $lues );
+            if ( $vides ) {
+                $r .= sprintf( ' %d mention(s) sans contact ni démarche écartée(s).', $vides );
+            }
+            return $r;
+        }
+    );
+}
+
 function md_bots_handle_run() {
     if ( ! current_user_can( MD_BOTS_CAP ) ) {
         wp_die( esc_html__( 'Accès refusé.', 'mango-dragon' ) );
