@@ -68,6 +68,17 @@ function md_bots_registry() {
             'vide'     => 'Aucune recherche effectuée pour le moment. Clique sur « Lancer la recherche ».',
         ],
 
+        'contacts' => [
+            'titre'    => 'Contacts',
+            'menu'     => 'Contacts',
+            // Pas d'option : cet onglet ne lance aucune recherche, il agrège
+            // les adresses déjà trouvées par les autres bots.
+            'option'   => '',
+            'agrege'   => true,
+            'colonne2' => null,
+            'vide'     => 'Aucune adresse exploitable pour l\'instant. Lance les recherches des autres onglets.',
+        ],
+
         // Le bot « Artistes émergents » n'est délibérément PAS déclaré ici.
         //
         // Son runner existe toujours (md_bots_run_artistes) mais il ne remonte
@@ -207,10 +218,107 @@ function md_bots_jours_restants( $echeance ) {
 }
 
 /**
+ * Rassemble les adresses e-mail exploitables trouvées par les autres bots.
+ *
+ * N'effectue aucune recherche : relit ce qui est déjà en base. Une adresse
+ * n'est retenue que si is_email() la valide — beaucoup de sites masquent les
+ * leurs (« [email protected] » de Cloudflare) ou les écrivent sans arobase,
+ * et une adresse fausse dans une liste de démarchage se paie en messages
+ * rejetés.
+ *
+ * @return array Entrées au format d'affichage, sans doublon d'adresse.
+ */
+function md_bots_collect_contacts() {
+    $entrees = [];
+    $vues    = [];
+
+    foreach ( md_bots_registry() as $slug => $bot ) {
+        if ( empty( $bot['option'] ) ) {
+            continue;
+        }
+
+        $data = md_bots_data( $bot['option'] );
+
+        foreach ( $data['entrees'] as $e ) {
+            $matiere = wp_json_encode( $e['details'] ?? [] ) . ' ' . ( $e['notes'] ?? '' );
+
+            if ( ! preg_match_all( '~[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}~', (string) $matiere, $m ) ) {
+                continue;
+            }
+
+            foreach ( $m[0] as $mail ) {
+                $mail = strtolower( trim( $mail, '.,;:' ) );
+
+                // Cloudflare remplace l'adresse par ce libellé : le retenir
+                // reviendrait à proposer une adresse qui n'existe pas.
+                if ( ! is_email( $mail ) || false !== strpos( $mail, 'email-protected' ) ) {
+                    continue;
+                }
+                if ( isset( $vues[ $mail ] ) ) {
+                    continue;
+                }
+                $vues[ $mail ] = true;
+
+                $entrees[] = [
+                    'id'         => sanitize_title( $mail ),
+                    'titre'      => $mail,
+                    'sous_titre' => ( $e['titre'] ?? '' ) . ' — ' . $bot['titre'],
+                    'url'        => $e['url'] ?? '',
+                    'echeance'   => null,
+                    'statut'     => $e['statut'] ?? '',
+                    'motif'      => '',
+                    'suivi'      => 'aucune',
+                    'nouveau'    => false,
+                    'details'    => array_intersect_key(
+                        $e['details'] ?? [],
+                        array_flip( [ 'Comment soumettre', 'Démarche', 'Premières', 'Genres couverts', 'Programmation', 'Conditions' ] )
+                    ),
+                    'notes'      => '',
+                ];
+            }
+        }
+    }
+
+    return $entrees;
+}
+
+/**
+ * Modèle de message, à personnaliser avant tout envoi.
+ */
+function md_bots_modele_message() {
+    return "Objet : Mango Dragon International — [nom de la sortie]\n\n"
+        . "Bonjour,\n\n"
+        . "Je vous écris de Mango Dragon International, label associatif basé à Genève "
+        . "(drum & bass, jungle, dubstep, dub, ambient, expérimental).\n\n"
+        . "[Une phrase précise sur POURQUOI vous les contactez eux : un disque qu'ils ont "
+        . "chroniqué, un artiste qu'ils ont programmé, une série où la sortie s'inscrirait.]\n\n"
+        . "Notre prochaine sortie, [titre] de [artiste], paraît le [date].\n"
+        . "Écoute : [lien privé]\n"
+        . "Le label : https://mango-dragon.com\n\n"
+        . "Merci de votre attention,\n"
+        . "[votre nom] — Mango Dragon International\n"
+        . "contact@mango-dragon.com";
+}
+
+/**
  * Rendu d'une page de bot.
  */
 function md_bots_render( $slug, array $bot ) {
-    $data    = md_bots_data( $bot['option'] );
+    if ( ! empty( $bot['agrege'] ) ) {
+        $data = [
+            'execute_le' => '',
+            'resume'     => '',
+            'entrees'    => md_bots_collect_contacts(),
+        ];
+        $data['resume'] = sprintf(
+            '%d adresse(s) exploitable(s), rassemblée(s) depuis les autres onglets. '
+                . 'Les adresses masquées par les sites (Cloudflare) ou mal formées sont écartées.',
+            count( $data['entrees'] )
+        );
+    } else {
+        $data = md_bots_data( $bot['option'] );
+    }
+
     $entrees = md_bots_sort( $data['entrees'] );
     ?>
     <div class="wrap md-bots">
@@ -275,6 +383,19 @@ function md_bots_render( $slug, array $bot ) {
             return;
         endif;
         ?>
+
+        <?php if ( ! empty( $bot['agrege'] ) ) : ?>
+            <h2>Modèle de message</h2>
+            <p class="description">
+                À <strong>personnaliser avant chaque envoi</strong>. Un message identique expédié à
+                vingt destinataires se repère immédiatement et finit en indésirable — le passage
+                entre crochets est le seul qui décide si on vous lit. Envoyez depuis votre propre
+                boîte, un destinataire à la fois : rien n'est expédié depuis cette page.
+            </p>
+            <textarea readonly rows="16" style="width:100%;max-width:820px;font-family:monospace;font-size:12px"
+                onclick="this.select()"><?php echo esc_textarea( md_bots_modele_message() ); ?></textarea>
+            <h2>Adresses rassemblées</h2>
+        <?php endif; ?>
 
         <?php
         // Colonne d'échéance affichée seulement pour les bots qui en ont une.
