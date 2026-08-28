@@ -774,6 +774,14 @@ function md_bots_sources_disquaires() {
         [ 'nom' => 'Deejay.de',                       'url' => 'https://www.deejay.de/', 'index' => true ],
         [ 'nom' => 'Redeye Worldwide',                'url' => 'https://www.redeyeworldwide.com/', 'index' => true ],
         [ 'nom' => 'Record Stores Love — annuaire',   'url' => 'https://recordstores.love/', 'index' => true ],
+
+        // Suisse. Un premier pressage se place plus facilement en dépôt-vente
+        // chez trois disquaires romands qu'auprès d'un distributeur néerlandais.
+        // Les autres enseignes suisses envisagées n'ont pas de site joignable :
+        // l'annuaire ci-dessous sert justement à les découvrir sans les deviner.
+        [ 'nom' => 'Bongo Joe — Genève',              'url' => 'https://bongojoe.ch/', 'index' => true ],
+        [ 'nom' => 'Plattfon — Bâle',                 'url' => 'https://plattfon.ch/', 'index' => true ],
+        [ 'nom' => 'Disquaires suisses — annuaire',   'url' => 'https://recordstores.love/switzerland' ],
     ];
 }
 
@@ -877,6 +885,131 @@ function md_bots_run_disquaires() {
             $r = sprintf( '%d structure(s) retenue(s) sur %d page(s) lue(s).', count( $entrees ), $lues );
             if ( $vides ) {
                 $r .= sprintf( ' %d mention(s) sans contact ni conditions écartée(s).', $vides );
+            }
+            return $r;
+        }
+    );
+}
+
+// ==========================================================================
+// Bot « Artistes émergents »
+// ==========================================================================
+
+/**
+ * Sources de repérage d'artistes.
+ *
+ * Les pages Bandcamp par genre (bandcamp.com/tag/jungle et consorts) ont été
+ * essayées puis écartées : elles se rendent entièrement en JavaScript et le
+ * HTML servi ne contient que l'interface de filtres — 548 caractères, zéro
+ * artiste. Un bot bâti dessus n'aurait jamais rien remonté.
+ *
+ * Restent des pages qui servent réellement du texte : les programmations de
+ * festivals romands, le portail suisse Mx3, et l'éditorial de Bandcamp Daily.
+ */
+function md_bots_sources_artistes() {
+    return [
+        [ 'nom' => 'Antigel — Genève',            'url' => 'https://www.antigel.ch/', 'index' => true ],
+        [ 'nom' => 'Electron Festival — Genève',  'url' => 'https://electronfestival.ch/', 'index' => true ],
+        [ 'nom' => 'Les Digitales',               'url' => 'https://www.lesdigitales.ch/', 'index' => true ],
+        [ 'nom' => 'Mx3 — portail suisse',        'url' => 'https://mx3.ch/genres' ],
+        [ 'nom' => 'Bandcamp Daily — électronique','url' => 'https://daily.bandcamp.com/genre/electronic' ],
+        [ 'nom' => 'Bandcamp Daily — best of',    'url' => 'https://daily.bandcamp.com/best-electronic' ],
+    ];
+}
+
+/**
+ * Extrait les artistes cités dans le texte fourni.
+ *
+ * @return array|WP_Error
+ */
+function md_bots_extract_artistes( $source, $texte ) {
+    $system = "Tu es un assistant qui EXTRAIT des informations d'un texte fourni. "
+        . "Tu ne réponds jamais de mémoire et tu n'ajoutes aucune connaissance extérieure sur les artistes. "
+        . "Si une information n'apparaît pas dans le texte, tu écris null. "
+        . "Tu réponds uniquement par du JSON valide, sans commentaire ni balise markdown.";
+
+    $user = "Voici le texte d'une page de festival, de portail musical ou de magazine.\n\n"
+        . "Contexte : label associatif genevois de musiques électroniques et expérimentales "
+        . "(drum & bass, jungle, dubstep, dub, bass music, ambient, noise). Il repère des artistes "
+        . "émergents qu'il pourrait signer ou programmer.\n\n"
+        . "Extrais les ARTISTES ou GROUPES nommés dans le texte :\n"
+        . '{"artistes":[{"nom":"...","genre":"genre indiqué, ou null","provenance":"ville ou pays, ou null",'
+        . '"contexte":"ce que le texte en dit — programmé, chroniqué, sorti un disque...",'
+        . '"pertinent":true|false,"motif":"si non pertinent, pourquoi"}]}' . "\n\n"
+        . "Règles strictes :\n"
+        . "- N'invente aucun genre ni aucune provenance : uniquement ce que le texte dit.\n"
+        . "- N'invente pas d'artiste : seulement ceux nommés dans le texte.\n"
+        . "- Ignore les noms de salles, de festivals, de sponsors et de rubriques.\n"
+        . "- pertinent = false si l'artiste relève clairement d'un autre univers musical.\n"
+        . "- Aucun artiste nommé ? Réponds {\"artistes\":[]}.\n\n"
+        . "SOURCE : " . $source . "\n\n=== TEXTE ===\n" . $texte;
+
+    $reponse = md_omniroute_complete( $system, $user );
+    if ( is_wp_error( $reponse ) ) {
+        return $reponse;
+    }
+
+    $data = md_json_from_reply( $reponse );
+    if ( null === $data || ! isset( $data['artistes'] ) || ! is_array( $data['artistes'] ) ) {
+        return new WP_Error( 'extract_format', 'Le modèle n\'a pas renvoyé de JSON exploitable.' );
+    }
+
+    return $data['artistes'];
+}
+
+/**
+ * Lance le repérage d'artistes émergents.
+ */
+function md_bots_run_artistes() {
+    $mots = '~(programm|line-?up|artist|edition|festival|archive|20[0-9]{2})~i';
+
+    return md_bots_run_generic(
+        md_bots_expand_sources( md_bots_sources_artistes(), $mots ),
+        'md_bots_extract_artistes',
+        function ( $a, $src ) {
+            if ( empty( $a['nom'] ) ) {
+                return null;
+            }
+
+            // Un nom sans le moindre contexte ne vaut rien : impossible de
+            // savoir si c'est un artiste, une salle ou une rubrique mal lue.
+            if ( empty( $a['genre'] ) && empty( $a['provenance'] ) && empty( $a['contexte'] ) ) {
+                return null;
+            }
+
+            $details = [];
+            if ( ! empty( $a['genre'] ) ) {
+                $details['Genre'] = (string) $a['genre'];
+            }
+            if ( ! empty( $a['provenance'] ) ) {
+                $details['Provenance'] = (string) $a['provenance'];
+            }
+            if ( ! empty( $a['contexte'] ) ) {
+                $details['Repéré via'] = (string) $a['contexte'];
+            }
+            $details['Source lue'] = $src['nom'];
+
+            $pertinent = ! isset( $a['pertinent'] ) || (bool) $a['pertinent'];
+
+            return [
+                'id'         => sanitize_title( $a['nom'] ),
+                'titre'      => (string) $a['nom'],
+                'sous_titre' => ! empty( $a['provenance'] ) ? (string) $a['provenance'] : $src['nom'],
+                'url'        => $src['url'],
+                'echeance'   => null,
+                'statut'     => $pertinent ? 'à vérifier' : 'hors critères',
+                'motif'      => ! empty( $a['motif'] ) ? (string) $a['motif'] : '',
+                'suivi'      => 'aucune',
+                'nouveau'    => true,
+                'details'    => $details,
+                'notes'      => '',
+            ];
+        },
+        'md_bot_artistes',
+        function ( $entrees, $lues, $vides ) {
+            $r = sprintf( '%d artiste(s) repéré(s) sur %d page(s) lue(s).', count( $entrees ), $lues );
+            if ( $vides ) {
+                $r .= sprintf( ' %d nom(s) sans contexte écarté(s).', $vides );
             }
             return $r;
         }

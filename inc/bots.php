@@ -60,6 +60,13 @@ function md_bots_registry() {
             'colonne2' => null,
             'vide'     => 'Aucune recherche effectuée pour le moment. Clique sur « Lancer la recherche ».',
         ],
+        'artistes' => [
+            'titre'    => 'Artistes émergents',
+            'menu'     => 'Artistes émergents',
+            'option'   => 'md_bot_artistes',
+            'colonne2' => null,
+            'vide'     => 'Aucune recherche effectuée pour le moment. Clique sur « Lancer la recherche ».',
+        ],
     ];
 }
 
