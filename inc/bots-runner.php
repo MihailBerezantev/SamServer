@@ -753,6 +753,136 @@ function md_bots_run_promo() {
     );
 }
 
+// ==========================================================================
+// Bot « Disquaires & distribution »
+// ==========================================================================
+
+/**
+ * Distributeurs et annuaires de disquaires pour une sortie vinyle.
+ *
+ * URL vérifiées : chacune renvoie 200. Trois candidates écartées après test —
+ * VinylHub, Juno et Word and Sound renvoient 403 aux robots. Les garder aurait
+ * produit un échec à chaque exécution, et un résumé « INCOMPLÈTE » permanent
+ * qu'on finirait par ne plus lire.
+ */
+function md_bots_sources_disquaires() {
+    return [
+        [ 'nom' => 'Kudos Records — services labels', 'url' => 'https://www.kudosrecords.co.uk/label-services' ],
+        [ 'nom' => 'Clone Distribution',              'url' => 'https://clone.nl/', 'index' => true ],
+        [ 'nom' => 'Triple Vision',                   'url' => 'https://www.triplevision.nl/', 'index' => true ],
+        [ 'nom' => 'Rush Hour',                       'url' => 'https://rushhour.nl/', 'index' => true ],
+        [ 'nom' => 'Deejay.de',                       'url' => 'https://www.deejay.de/', 'index' => true ],
+        [ 'nom' => 'Redeye Worldwide',                'url' => 'https://www.redeyeworldwide.com/', 'index' => true ],
+        [ 'nom' => 'Record Stores Love — annuaire',   'url' => 'https://recordstores.love/', 'index' => true ],
+    ];
+}
+
+/**
+ * Extrait les conditions de distribution décrites dans le texte fourni.
+ *
+ * @return array|WP_Error
+ */
+function md_bots_extract_disquaires( $source, $texte ) {
+    $system = "Tu es un assistant qui EXTRAIT des informations d'un texte fourni. "
+        . "Tu ne réponds jamais de mémoire. Si une information n'apparaît pas dans le texte, tu écris null. "
+        . "Tu réponds uniquement par du JSON valide, sans commentaire ni balise markdown.";
+
+    $user = "Voici le texte d'une page d'un distributeur de disques ou d'un disquaire.\n\n"
+        . "Contexte : label associatif genevois de musiques électroniques et expérimentales "
+        . "(drum & bass, jungle, dubstep, dub, bass music, ambient, noise). Il prépare sa première "
+        . "sortie vinyle et cherche qui pourrait la distribuer ou la vendre.\n\n"
+        . "Extrais ce que le texte dit sur la distribution :\n"
+        . '{"structures":[{"nom":"...","role":"distributeur|disquaire|annuaire|null",'
+        . '"territoire":"pays ou zone couverte, ou null","genres":"genres distribués, ou null",'
+        . '"contact":"e-mail, formulaire ou page indiquée dans le texte, ou null",'
+        . '"conditions":"ce que le texte dit des conditions d\'acceptation d\'un label, ou null",'
+        . '"pertinent":true|false,"motif":"si non pertinent, pourquoi"}]}' . "\n\n"
+        . "Règles strictes :\n"
+        . "- N'invente aucune adresse e-mail : recopie celle du texte ou écris null.\n"
+        . "- contact UNIQUEMENT si le texte indique réellement comment les joindre.\n"
+        . "- pertinent = false si la structure ne distribue pas ces genres.\n"
+        . "- Rien de tel dans le texte ? Réponds {\"structures\":[]}.\n\n"
+        . "SOURCE : " . $source . "\n\n=== TEXTE ===\n" . $texte;
+
+    $reponse = md_omniroute_complete( $system, $user );
+    if ( is_wp_error( $reponse ) ) {
+        return $reponse;
+    }
+
+    $data = md_json_from_reply( $reponse );
+    if ( null === $data || ! isset( $data['structures'] ) || ! is_array( $data['structures'] ) ) {
+        return new WP_Error( 'extract_format', 'Le modèle n\'a pas renvoyé de JSON exploitable.' );
+    }
+
+    return $data['structures'];
+}
+
+/**
+ * Lance la recherche des disquaires et distributeurs.
+ */
+function md_bots_run_disquaires() {
+    // Sur un site de distributeur, l'information utile vit sous « distribution »,
+    // « label services » ou « contact ». « label » et « stock » ont été retirés
+    // après essai : sur une boutique ils attrapent les fiches produit et les
+    // classements de ventes, soit vingt secondes perdues par page inutile.
+    $mots = '~(distribution|services|contact|about|submit|demo|wholesale)~i';
+
+    return md_bots_run_generic(
+        md_bots_expand_sources( md_bots_sources_disquaires(), $mots ),
+        'md_bots_extract_disquaires',
+        function ( $s, $src ) {
+            if ( empty( $s['nom'] ) ) {
+                return null;
+            }
+
+            // Sans contact ni conditions, la fiche n'aide pas à agir : savoir
+            // qu'un distributeur existe ne dit pas comment le solliciter.
+            if ( empty( $s['contact'] ) && empty( $s['conditions'] ) ) {
+                return null;
+            }
+
+            $details = [];
+            if ( ! empty( $s['contact'] ) ) {
+                $details['Contact'] = (string) $s['contact'];
+            }
+            if ( ! empty( $s['conditions'] ) ) {
+                $details['Conditions'] = (string) $s['conditions'];
+            }
+            if ( ! empty( $s['territoire'] ) ) {
+                $details['Territoire'] = (string) $s['territoire'];
+            }
+            if ( ! empty( $s['genres'] ) ) {
+                $details['Genres distribués'] = (string) $s['genres'];
+            }
+            $details['Source lue'] = $src['nom'];
+
+            $pertinent = ! isset( $s['pertinent'] ) || (bool) $s['pertinent'];
+
+            return [
+                'id'         => sanitize_title( $s['nom'] ),
+                'titre'      => (string) $s['nom'],
+                'sous_titre' => ! empty( $s['role'] ) ? (string) $s['role'] : $src['nom'],
+                'url'        => $src['url'],
+                'echeance'   => null,
+                'statut'     => $pertinent ? 'à vérifier' : 'hors critères',
+                'motif'      => ! empty( $s['motif'] ) ? (string) $s['motif'] : '',
+                'suivi'      => 'aucune',
+                'nouveau'    => true,
+                'details'    => $details,
+                'notes'      => '',
+            ];
+        },
+        'md_bot_disquaires',
+        function ( $entrees, $lues, $vides ) {
+            $r = sprintf( '%d structure(s) retenue(s) sur %d page(s) lue(s).', count( $entrees ), $lues );
+            if ( $vides ) {
+                $r .= sprintf( ' %d mention(s) sans contact ni conditions écartée(s).', $vides );
+            }
+            return $r;
+        }
+    );
+}
+
 function md_bots_handle_run() {
     if ( ! current_user_can( MD_BOTS_CAP ) ) {
         wp_die( esc_html__( 'Accès refusé.', 'mango-dragon' ) );

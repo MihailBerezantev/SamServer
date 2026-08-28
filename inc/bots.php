@@ -53,6 +53,13 @@ function md_bots_registry() {
             'colonne2' => null,
             'vide'     => 'Aucune recherche effectuée pour le moment. Clique sur « Lancer la recherche ».',
         ],
+        'disquaires' => [
+            'titre'    => 'Disquaires & distribution',
+            'menu'     => 'Disquaires',
+            'option'   => 'md_bot_disquaires',
+            'colonne2' => null,
+            'vide'     => 'Aucune recherche effectuée pour le moment. Clique sur « Lancer la recherche ».',
+        ],
     ];
 }
 
