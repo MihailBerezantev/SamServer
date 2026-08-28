@@ -117,6 +117,119 @@ add_action( 'init', 'md_bots_schedule_watchdog' );
 // ==========================================================================
 
 /**
+ * Exécute plusieurs requêtes HTTP en parallèle.
+ *
+ * C'est le cœur du fonctionnement multi-agents. En file d'attente, neuf appels
+ * modèle à soixante secondes font neuf minutes ; lancés ensemble, ils prennent
+ * le temps du plus lent. Et comme OmniRoute répartit chaque appel entre des
+ * fournisseurs gratuits de vitesses très inégales — mesuré entre 2 et 78
+ * secondes pour un même texte — un fournisseur saturé ne bloque plus les
+ * autres.
+ *
+ * La concurrence est plafonnée : les paliers gratuits refusent (429) quand on
+ * les sollicite trop vite, et saturer la passerelle transformerait le gain de
+ * vitesse en série d'échecs.
+ *
+ * @param array $requetes  [ clé => ['url'=>, 'body'=>null|string, 'timeout'=>int] ]
+ * @param int   $parallele Nombre maximal d'appels simultanés.
+ * @return array [ clé => ['code'=>int, 'body'=>string, 'erreur'=>string] ]
+ */
+function md_http_multi( array $requetes, $parallele = 4 ) {
+    $resultats = [];
+    $lots      = array_chunk( $requetes, max( 1, (int) $parallele ), true );
+
+    foreach ( $lots as $lot ) {
+        $multi   = curl_multi_init();
+        $handles = [];
+
+        foreach ( $lot as $cle => $r ) {
+            $ch = curl_init();
+
+            $opts = [
+                CURLOPT_URL            => $r['url'],
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_MAXREDIRS      => 5,
+                CURLOPT_TIMEOUT        => isset( $r['timeout'] ) ? (int) $r['timeout'] : 120,
+                CURLOPT_CONNECTTIMEOUT => 20,
+                CURLOPT_USERAGENT      => 'Mozilla/5.0 (compatible; MangoDragonBot/1.0; +https://mango-dragon.com)',
+            ];
+
+            if ( ! empty( $r['body'] ) ) {
+                $opts[ CURLOPT_POST ]       = true;
+                $opts[ CURLOPT_POSTFIELDS ] = $r['body'];
+                $opts[ CURLOPT_HTTPHEADER ] = [ 'Content-Type: application/json' ];
+            }
+
+            curl_setopt_array( $ch, $opts );
+            curl_multi_add_handle( $multi, $ch );
+            $handles[ $cle ] = $ch;
+        }
+
+        $actives = null;
+        do {
+            $etat = curl_multi_exec( $multi, $actives );
+            if ( $actives ) {
+                curl_multi_select( $multi, 1.0 );
+            }
+        } while ( $actives && CURLM_OK === $etat );
+
+        foreach ( $handles as $cle => $ch ) {
+            $resultats[ $cle ] = [
+                'code'   => (int) curl_getinfo( $ch, CURLINFO_HTTP_CODE ),
+                'body'   => (string) curl_multi_getcontent( $ch ),
+                'erreur' => curl_error( $ch ),
+            ];
+            curl_multi_remove_handle( $multi, $ch );
+            curl_close( $ch );
+        }
+
+        curl_multi_close( $multi );
+    }
+
+    return $resultats;
+}
+
+/**
+ * Corps JSON d'un appel de complétion.
+ */
+function md_omniroute_body( $system, $user ) {
+    return wp_json_encode( [
+        'model'       => MD_OMNIROUTE_MODEL,
+        'stream'      => false,
+        'temperature' => 0,
+        'messages'    => [
+            [ 'role' => 'system', 'content' => $system ],
+            [ 'role' => 'user', 'content' => $user ],
+        ],
+    ] );
+}
+
+/**
+ * Extrait le texte utile d'une réponse d'OmniRoute.
+ *
+ * @return string|WP_Error
+ */
+function md_omniroute_lire( array $reponse ) {
+    if ( '' !== $reponse['erreur'] ) {
+        return new WP_Error( 'omniroute_curl', $reponse['erreur'] );
+    }
+    if ( 429 === $reponse['code'] ) {
+        return new WP_Error( 'omniroute_429', 'quota gratuit épuisé (429)' );
+    }
+    if ( 200 !== $reponse['code'] ) {
+        return new WP_Error( 'omniroute_http', sprintf( 'OmniRoute a répondu %d', $reponse['code'] ) );
+    }
+
+    $data = json_decode( $reponse['body'], true );
+    if ( ! isset( $data['choices'][0]['message']['content'] ) ) {
+        return new WP_Error( 'omniroute_format', 'Réponse illisible d\'OmniRoute.' );
+    }
+
+    return (string) $data['choices'][0]['message']['content'];
+}
+
+/**
  * Interroge OmniRoute et renvoie le texte de la réponse.
  *
  * @return string|WP_Error
@@ -373,17 +486,31 @@ function md_bots_page_text( $url, $max = 18000 ) {
         return new WP_Error( 'fetch_http', sprintf( 'Page inaccessible (code %d)', $code ) );
     }
 
-    $html = wp_remote_retrieve_body( $r );
-    $html = preg_replace( '~<(script|style|nav|footer|svg)\b[^>]*>.*?</\1>~is', ' ', $html );
+    $txt = md_bots_html_to_text( wp_remote_retrieve_body( $r ), $max );
+
+    if ( '' === $txt ) {
+        return new WP_Error( 'fetch_empty', 'Page vide après nettoyage.' );
+    }
+
+    return $txt;
+}
+
+/**
+ * Réduit du HTML à du texte lisible par un modèle.
+ *
+ * Séparé de la récupération réseau pour servir aussi aux pages téléchargées en
+ * parallèle par md_http_multi(), qui rend du HTML brut sans passer par
+ * wp_remote_get().
+ *
+ * @return string Chaîne vide si rien d'exploitable.
+ */
+function md_bots_html_to_text( $html, $max = 18000 ) {
+    $html = preg_replace( '~<(script|style|nav|footer|svg)\b[^>]*>.*?</\1>~is', ' ', (string) $html );
     $txt  = wp_strip_all_tags( $html );
     $txt  = html_entity_decode( $txt, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
     $txt  = preg_replace( '/[ \t]+/', ' ', $txt );
     $txt  = preg_replace( '/\n{3,}/', "\n\n", $txt );
     $txt  = trim( $txt );
-
-    if ( '' === $txt ) {
-        return new WP_Error( 'fetch_empty', 'Page vide après nettoyage.' );
-    }
 
     return mb_substr( $txt, 0, $max );
 }
@@ -397,7 +524,7 @@ function md_bots_page_text( $url, $max = 18000 ) {
  *
  * @return array|WP_Error Liste d'entrées.
  */
-function md_bots_extract_subventions( $source, $texte ) {
+function md_bots_prompt_subventions( $source, $texte ) {
     $system = "Tu es un assistant qui EXTRAIT des informations d'un texte fourni. "
         . "Tu ne réponds jamais de mémoire et tu n'ajoutes aucune connaissance extérieure. "
         . "Si une information n'apparaît pas littéralement dans le texte, tu écris null. "
@@ -417,17 +544,7 @@ function md_bots_extract_subventions( $source, $texte ) {
         . "- Aucun dispositif décrit ? Réponds {\"dispositifs\":[]}.\n\n"
         . "SOURCE : " . $source . "\n\n=== TEXTE ===\n" . $texte;
 
-    $reponse = md_omniroute_complete( $system, $user );
-    if ( is_wp_error( $reponse ) ) {
-        return $reponse;
-    }
-
-    $data = md_json_from_reply( $reponse );
-    if ( null === $data || ! isset( $data['dispositifs'] ) || ! is_array( $data['dispositifs'] ) ) {
-        return new WP_Error( 'extract_format', 'Le modèle n\'a pas renvoyé de JSON exploitable.' );
-    }
-
-    return $data['dispositifs'];
+    return [ 'system' => $system, 'user' => $user ];
 }
 
 // ==========================================================================
@@ -448,7 +565,7 @@ function md_bots_extract_subventions( $source, $texte ) {
  * @param callable $resumer    fn( array $entrees, int $lues, int $vides ) => string
  * @return array
  */
-function md_bots_run_generic( $sources, $extraire, $convertir, $option, $resumer ) {
+function md_bots_run_generic( $sources, $prompt, $cle_json, $convertir, $option, $resumer ) {
     if ( ! md_omniroute_up() && ! md_omniroute_start() ) {
         return [ 'ok' => false, 'message' => 'OmniRoute ne répond pas et n\'a pas pu être relancé.' ];
     }
@@ -456,31 +573,84 @@ function md_bots_run_generic( $sources, $extraire, $convertir, $option, $resumer
     $entrees = [];
     $echecs  = [];
     $vides   = 0;
-    $debut   = time();
 
-    // Depuis le navigateur, PHP coupe la requête : on garde une marge. En ligne
-    // de commande ou par cron, aucune limite ne s'applique.
-    $budget = ( ( defined( 'WP_CLI' ) && WP_CLI ) || wp_doing_cron() ) ? 900 : 240;
+    // --- Étape 1 : toutes les pages téléchargées ensemble --------------------
+    $req = [];
+    foreach ( $sources as $i => $src ) {
+        $req[ $i ] = [ 'url' => $src['url'], 'timeout' => 45 ];
+    }
 
-    foreach ( $sources as $src ) {
-        if ( ( time() - $debut ) > $budget ) {
-            $echecs[] = $src['nom'] . ' (temps imparti dépassé)';
+    $pages  = md_http_multi( $req, 6 );
+    $textes = [];
+
+    foreach ( $sources as $i => $src ) {
+        $rep = $pages[ $i ] ?? [ 'code' => 0, 'body' => '', 'erreur' => 'aucune réponse' ];
+
+        if ( '' !== $rep['erreur'] ) {
+            $echecs[] = $src['nom'] . ' (' . $rep['erreur'] . ')';
+            continue;
+        }
+        if ( $rep['code'] < 200 || $rep['code'] >= 300 ) {
+            $echecs[] = $src['nom'] . sprintf( ' (page inaccessible, code %d)', $rep['code'] );
             continue;
         }
 
-        $texte = md_bots_page_text( $src['url'] );
-        if ( is_wp_error( $texte ) ) {
-            $echecs[] = $src['nom'] . ' (' . $texte->get_error_message() . ')';
+        $texte = md_bots_html_to_text( $rep['body'] );
+        if ( '' === $texte ) {
+            $echecs[] = $src['nom'] . ' (page vide après nettoyage)';
             continue;
         }
 
-        $bruts = call_user_func( $extraire, $src['nom'], $texte );
-        if ( is_wp_error( $bruts ) ) {
-            $echecs[] = $src['nom'] . ' (' . $bruts->get_error_message() . ')';
+        $textes[ $i ] = $texte;
+    }
+
+    // --- Étape 2 : tous les appels modèle lancés ensemble --------------------
+    // C'est ici que se joue le gain : un fournisseur gratuit lent n'immobilise
+    // plus la file, il retarde seulement sa propre réponse.
+    $req = [];
+    foreach ( $textes as $i => $texte ) {
+        $p           = call_user_func( $prompt, $sources[ $i ]['nom'], $texte );
+        $req[ $i ]   = [
+            'url'     => MD_OMNIROUTE_BASE . '/chat/completions',
+            'body'    => md_omniroute_body( $p['system'], $p['user'] ),
+            'timeout' => 180,
+        ];
+    }
+
+    $reponses = md_http_multi( $req, 4 );
+
+    // --- Étape 3 : relance des seuls appels refusés pour quota ---------------
+    $a_reprendre = [];
+    foreach ( $reponses as $i => $rep ) {
+        if ( 429 === $rep['code'] || 503 === $rep['code'] ) {
+            $a_reprendre[ $i ] = $req[ $i ];
+        }
+    }
+
+    if ( $a_reprendre ) {
+        sleep( 8 );
+        foreach ( md_http_multi( $a_reprendre, 2 ) as $i => $rep ) {
+            $reponses[ $i ] = $rep;
+        }
+    }
+
+    // --- Étape 4 : lecture et conversion ------------------------------------
+    foreach ( $textes as $i => $texte ) {
+        $src = $sources[ $i ];
+
+        $lu = md_omniroute_lire( $reponses[ $i ] ?? [ 'code' => 0, 'body' => '', 'erreur' => 'aucune réponse' ] );
+        if ( is_wp_error( $lu ) ) {
+            $echecs[] = $src['nom'] . ' (' . $lu->get_error_message() . ')';
             continue;
         }
 
-        foreach ( $bruts as $brut ) {
+        $data = md_json_from_reply( $lu );
+        if ( null === $data || ! isset( $data[ $cle_json ] ) || ! is_array( $data[ $cle_json ] ) ) {
+            $echecs[] = $src['nom'] . ' (réponse du modèle inexploitable)';
+            continue;
+        }
+
+        foreach ( $data[ $cle_json ] as $brut ) {
             $entree = call_user_func( $convertir, $brut, $src );
             if ( null === $entree ) {
                 $vides++;
@@ -514,43 +684,13 @@ function md_bots_run_generic( $sources, $extraire, $convertir, $option, $resumer
  * @return array Compte rendu.
  */
 function md_bots_run_subventions() {
-    if ( ! md_omniroute_up() && ! md_omniroute_start() ) {
-        return [ 'ok' => false, 'message' => 'OmniRoute ne répond pas et n\'a pas pu être relancé.' ];
-    }
-
-    $entrees = [];
-    $echecs  = [];
-    $vides   = 0;
-    $debut   = time();
-
-    // Depuis le navigateur, PHP coupe la requête : on garde une marge. En ligne
-    // de commande ou par cron, aucune limite ne s'applique, on peut aller plus
-    // loin et lire davantage de pages.
-    $budget = ( defined( 'WP_CLI' ) && WP_CLI ) || wp_doing_cron() ? 900 : 240;
-
-    $sources = md_bots_expand_sources( md_bots_sources_subventions() );
-
-    foreach ( $sources as $src ) {
-        if ( ( time() - $debut ) > $budget ) {
-            $echecs[] = $src['nom'] . ' (temps imparti dépassé)';
-            continue;
-        }
-
-        $texte = md_bots_page_text( $src['url'] );
-        if ( is_wp_error( $texte ) ) {
-            $echecs[] = $src['nom'] . ' (' . $texte->get_error_message() . ')';
-            continue;
-        }
-
-        $dispositifs = md_bots_extract_subventions( $src['nom'], $texte );
-        if ( is_wp_error( $dispositifs ) ) {
-            $echecs[] = $src['nom'] . ' (' . $dispositifs->get_error_message() . ')';
-            continue;
-        }
-
-        foreach ( $dispositifs as $d ) {
+    return md_bots_run_generic(
+        md_bots_expand_sources( md_bots_sources_subventions() ),
+        'md_bots_prompt_subventions',
+        'dispositifs',
+        function ( $d, $src ) {
             if ( empty( $d['titre'] ) ) {
-                continue;
+                return null;
             }
 
             // Un dispositif réel annonce au moins un montant ou une date. Une
@@ -563,11 +703,8 @@ function md_bots_run_subventions() {
             // rendait le filtre inopérant — 74 entrées retenues dont 2 avaient
             // une échéance.
             if ( empty( $d['montant'] ) && empty( $d['echeance'] ) ) {
-                $vides++;
-                continue;
+                return null;
             }
-
-            $pertinent = ! isset( $d['pertinent'] ) || (bool) $d['pertinent'];
 
             $details = [];
             if ( ! empty( $d['montant'] ) ) {
@@ -578,7 +715,9 @@ function md_bots_run_subventions() {
             }
             $details['Source lue'] = $src['nom'];
 
-            $entrees[] = [
+            $pertinent = ! isset( $d['pertinent'] ) || (bool) $d['pertinent'];
+
+            return [
                 'id'         => sanitize_title( $d['titre'] ),
                 'titre'      => (string) $d['titre'],
                 'sous_titre' => ! empty( $d['organisme'] ) ? (string) $d['organisme'] : $src['nom'],
@@ -593,38 +732,30 @@ function md_bots_run_subventions() {
                 'details'    => $details,
                 'notes'      => '',
             ];
-        }
-    }
+        },
+        'md_bot_subventions',
+        function ( $entrees, $lues, $vides ) {
+            $avec_date = 0;
+            foreach ( $entrees as $e ) {
+                if ( ! empty( $e['echeance'] ) ) {
+                    $avec_date++;
+                }
+            }
 
-    $avec_date = 0;
-    foreach ( $entrees as $e ) {
-        if ( ! empty( $e['echeance'] ) ) {
-            $avec_date++;
-        }
-    }
+            $r = sprintf(
+                '%d dispositif(s) retenu(s) sur %d page(s) lue(s), dont %d avec une échéance datée.',
+                count( $entrees ),
+                $lues,
+                $avec_date
+            );
 
-    $resume = sprintf(
-        '%d dispositif(s) retenu(s) sur %d page(s) lue(s), dont %d avec une échéance datée.',
-        count( $entrees ),
-        count( $sources ) - count( $echecs ),
-        $avec_date
+            if ( $vides ) {
+                $r .= sprintf( ' %d libellé(s) sans montant ni échéance écarté(s).', $vides );
+            }
+
+            return $r;
+        }
     );
-
-    if ( $vides ) {
-        $resume .= sprintf( ' %d libellé(s) sans montant ni échéance écarté(s).', $vides );
-    }
-
-    if ( $echecs ) {
-        $resume .= ' Recherche INCOMPLÈTE — pages non lues : ' . implode( ' ; ', $echecs ) . '.';
-    }
-
-    update_option( 'md_bot_subventions', wp_json_encode( [
-        'execute_le' => current_time( 'Y-m-d' ),
-        'resume'     => $resume,
-        'entrees'    => $entrees,
-    ] ) );
-
-    return [ 'ok' => true, 'message' => $resume ];
 }
 
 // ==========================================================================
@@ -658,9 +789,9 @@ function md_bots_sources_promo() {
 /**
  * Extrait les modalités de soumission décrites dans le texte fourni.
  *
- * @return array|WP_Error
+ * @return array ['system' => ..., 'user' => ...]
  */
-function md_bots_extract_promo( $source, $texte ) {
+function md_bots_prompt_promo( $source, $texte ) {
     $system = "Tu es un assistant qui EXTRAIT des informations d'un texte fourni. "
         . "Tu ne réponds jamais de mémoire. Si une information n'apparaît pas dans le texte, tu écris null. "
         . "Tu réponds uniquement par du JSON valide, sans commentaire ni balise markdown.";
@@ -681,17 +812,7 @@ function md_bots_extract_promo( $source, $texte ) {
         . "- Rien de tel dans le texte ? Réponds {\"plateformes\":[]}.\n\n"
         . "SOURCE : " . $source . "\n\n=== TEXTE ===\n" . $texte;
 
-    $reponse = md_omniroute_complete( $system, $user );
-    if ( is_wp_error( $reponse ) ) {
-        return $reponse;
-    }
-
-    $data = md_json_from_reply( $reponse );
-    if ( null === $data || ! isset( $data['plateformes'] ) || ! is_array( $data['plateformes'] ) ) {
-        return new WP_Error( 'extract_format', 'Le modèle n\'a pas renvoyé de JSON exploitable.' );
-    }
-
-    return $data['plateformes'];
+    return [ 'system' => $system, 'user' => $user ];
 }
 
 /**
@@ -704,7 +825,8 @@ function md_bots_run_promo() {
 
     return md_bots_run_generic(
         md_bots_expand_sources( md_bots_sources_promo(), $mots ),
-        'md_bots_extract_promo',
+        'md_bots_prompt_promo',
+        'plateformes',
         function ( $p, $src ) {
             if ( empty( $p['nom'] ) ) {
                 return null;
@@ -792,9 +914,9 @@ function md_bots_sources_disquaires() {
 /**
  * Extrait les conditions de distribution décrites dans le texte fourni.
  *
- * @return array|WP_Error
+ * @return array ['system' => ..., 'user' => ...]
  */
-function md_bots_extract_disquaires( $source, $texte ) {
+function md_bots_prompt_disquaires( $source, $texte ) {
     $system = "Tu es un assistant qui EXTRAIT des informations d'un texte fourni. "
         . "Tu ne réponds jamais de mémoire. Si une information n'apparaît pas dans le texte, tu écris null. "
         . "Tu réponds uniquement par du JSON valide, sans commentaire ni balise markdown.";
@@ -816,17 +938,7 @@ function md_bots_extract_disquaires( $source, $texte ) {
         . "- Rien de tel dans le texte ? Réponds {\"structures\":[]}.\n\n"
         . "SOURCE : " . $source . "\n\n=== TEXTE ===\n" . $texte;
 
-    $reponse = md_omniroute_complete( $system, $user );
-    if ( is_wp_error( $reponse ) ) {
-        return $reponse;
-    }
-
-    $data = md_json_from_reply( $reponse );
-    if ( null === $data || ! isset( $data['structures'] ) || ! is_array( $data['structures'] ) ) {
-        return new WP_Error( 'extract_format', 'Le modèle n\'a pas renvoyé de JSON exploitable.' );
-    }
-
-    return $data['structures'];
+    return [ 'system' => $system, 'user' => $user ];
 }
 
 /**
@@ -841,7 +953,8 @@ function md_bots_run_disquaires() {
 
     return md_bots_run_generic(
         md_bots_expand_sources( md_bots_sources_disquaires(), $mots ),
-        'md_bots_extract_disquaires',
+        'md_bots_prompt_disquaires',
+        'structures',
         function ( $s, $src ) {
             if ( empty( $s['nom'] ) ) {
                 return null;
@@ -930,9 +1043,9 @@ function md_bots_sources_artistes() {
 /**
  * Extrait les artistes cités dans le texte fourni.
  *
- * @return array|WP_Error
+ * @return array ['system' => ..., 'user' => ...]
  */
-function md_bots_extract_artistes( $source, $texte ) {
+function md_bots_prompt_artistes( $source, $texte ) {
     $system = "Tu es un assistant qui EXTRAIT des informations d'un texte fourni. "
         . "Tu ne réponds jamais de mémoire et tu n'ajoutes aucune connaissance extérieure sur les artistes. "
         . "Si une information n'apparaît pas dans le texte, tu écris null. "
@@ -954,17 +1067,7 @@ function md_bots_extract_artistes( $source, $texte ) {
         . "- Aucun artiste nommé ? Réponds {\"artistes\":[]}.\n\n"
         . "SOURCE : " . $source . "\n\n=== TEXTE ===\n" . $texte;
 
-    $reponse = md_omniroute_complete( $system, $user );
-    if ( is_wp_error( $reponse ) ) {
-        return $reponse;
-    }
-
-    $data = md_json_from_reply( $reponse );
-    if ( null === $data || ! isset( $data['artistes'] ) || ! is_array( $data['artistes'] ) ) {
-        return new WP_Error( 'extract_format', 'Le modèle n\'a pas renvoyé de JSON exploitable.' );
-    }
-
-    return $data['artistes'];
+    return [ 'system' => $system, 'user' => $user ];
 }
 
 /**
@@ -977,7 +1080,8 @@ function md_bots_run_artistes() {
 
     return md_bots_run_generic(
         md_bots_expand_sources( md_bots_sources_artistes(), $mots ),
-        'md_bots_extract_artistes',
+        'md_bots_prompt_artistes',
+        'artistes',
         function ( $a, $src ) {
             if ( empty( $a['nom'] ) ) {
                 return null;
@@ -1075,9 +1179,9 @@ function md_bots_sources_booking() {
 /**
  * Extrait les modalités de démarchage décrites dans le texte fourni.
  *
- * @return array|WP_Error
+ * @return array ['system' => ..., 'user' => ...]
  */
-function md_bots_extract_booking( $source, $texte ) {
+function md_bots_prompt_booking( $source, $texte ) {
     $system = "Tu es un assistant qui EXTRAIT des informations d'un texte fourni. "
         . "Tu ne réponds jamais de mémoire. Si une information n'apparaît pas dans le texte, tu écris null. "
         . "Tu réponds uniquement par du JSON valide, sans commentaire ni balise markdown.";
@@ -1098,17 +1202,7 @@ function md_bots_extract_booking( $source, $texte ) {
         . "- Rien de tel dans le texte ? Réponds {\"lieux\":[]}.\n\n"
         . "SOURCE : " . $source . "\n\n=== TEXTE ===\n" . $texte;
 
-    $reponse = md_omniroute_complete( $system, $user );
-    if ( is_wp_error( $reponse ) ) {
-        return $reponse;
-    }
-
-    $data = md_json_from_reply( $reponse );
-    if ( null === $data || ! isset( $data['lieux'] ) || ! is_array( $data['lieux'] ) ) {
-        return new WP_Error( 'extract_format', 'Le modèle n\'a pas renvoyé de JSON exploitable.' );
-    }
-
-    return $data['lieux'];
+    return [ 'system' => $system, 'user' => $user ];
 }
 
 /**
@@ -1119,7 +1213,8 @@ function md_bots_run_booking() {
 
     return md_bots_run_generic(
         md_bots_expand_sources( md_bots_sources_booking(), $mots ),
-        'md_bots_extract_booking',
+        'md_bots_prompt_booking',
+        'lieux',
         function ( $l, $src ) {
             if ( empty( $l['nom'] ) ) {
                 return null;
