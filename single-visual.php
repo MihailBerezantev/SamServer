@@ -88,7 +88,18 @@ if ( $thumb_id ) {
 <?php if ( ! empty( $gallery_ids ) ) : ?>
 <section class="visual-collection section">
     <div class="container">
-        <div class="visual-collection__grid" data-lightbox-gallery>
+        <?php
+        // Nombre d'images par ligne choisi sur la collection (0 = automatique).
+        // En mode imposé, la grille passe en colonnes égales : les vignettes
+        // occupent toute la largeur, ce que la galerie justifiée ne sait pas
+        // faire quand toutes les images sont carrées — elles ont un flex-grow
+        // nul et rien n'absorbe alors l'espace restant.
+        $md_per_row = (int) get_post_meta( $visual_id, '_md_visual_per_row', true );
+        $md_per_row = ( $md_per_row >= 1 && $md_per_row <= 5 ) ? $md_per_row : 0;
+        ?>
+        <div class="visual-collection__grid<?php echo $md_per_row ? ' visual-collection__grid--fixe' : ''; ?>"
+            <?php if ( $md_per_row ) : ?>style="--per-row:<?php echo (int) $md_per_row; ?>"<?php endif; ?>
+            data-lightbox-gallery>
             <?php foreach ( $gallery_ids as $md_i => $md_img_id ) :
                 // Dimensionnement piloté par la HAUTEUR (axe vertical) : on calcule le ratio
                 // largeur/hauteur de chaque image → la vignette prend sa largeur naturelle à

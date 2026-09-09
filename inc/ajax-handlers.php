@@ -194,18 +194,18 @@ function md_contact_form() {
     }
 
     $to      = 'contact@mango-dragon.com';
-    $subject = '[Mango Dragon] ' . ( $project !== '' ? $project : 'Nouveau message' );
+    $subject = '[Mango Dragon] ' . ( $project !== '' ? $project : 'New message' );
 
-    $body  = "Nouveau message depuis le site :\n\n";
-    $body .= "Email : {$email}\n";
+    $body  = "New message from the website:\n\n";
+    $body .= "Email: {$email}\n";
     if ( $project !== '' ) {
-        $body .= "Projet : {$project}\n\n";
+        $body .= "Project: {$project}\n\n";
     }
     if ( $description ) {
-        $body .= "Description :\n{$description}\n\n";
+        $body .= "Description:\n{$description}\n\n";
     }
     if ( $link ) {
-        $body .= "Lien fichiers : {$link}\n\n";
+        $body .= "Files link: {$link}\n\n";
     }
 
     $headers     = [
@@ -260,7 +260,7 @@ function md_contact_form() {
         if ( $file_hash ) { $seen_hashes[ $file_hash ] = $rel; }
 
         $attachments[] = md_private_path( $rel ); // pièce jointe e-mail
-        $body         .= "Fichier joint : " . $orig_name . ( $deduped ? " (doublon - reutilise)" : " (stockage prive)" ) . "\n";
+        $body         .= "Attachment: " . $orig_name . ( $deduped ? " (duplicate - reused)" : " (private storage)" ) . "\n";
         $att_records[] = [
             'kind' => 'private', 'media_id' => 0, 'orig' => $orig_name, 'stored' => basename( $rel ),
             'mime' => $upload['type'], 'size' => $file_size, 'hash' => $file_hash,

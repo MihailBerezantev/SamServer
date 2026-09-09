@@ -1566,6 +1566,59 @@ body.page-id-23 .page-content p {
     --v-row-h: 260px; /* rangées plus hautes → images plus grandes, ~3 par rangée (bureau) */
 }
 
+/* Mode « images par ligne imposé », choisi sur la collection.
+
+   La galerie justifiée ci-dessus dimensionne par la hauteur : chaque vignette
+   prend sa largeur naturelle, et les images NON carrées s'étirent pour venir
+   toucher les bords. Quand une collection ne contient que des carrés, ce
+   mécanisme ne peut pas jouer — les carrés ont un flex-grow nul pour ne jamais
+   se déformer, donc l'espace restant en fin de rangée n'est absorbé par
+   personne : dernière colonne vide et alignement bancal.
+
+   En colonnes égales, le problème disparaît : la largeur se déduit du nombre
+   d'images voulu, sans reste. */
+.visual-collection__grid--fixe {
+    /* Largeur minimale d'une vignette. En dessous, une pochette n'est plus
+       lisible : c'est ce seuil qui décide du nombre de colonnes sur petit
+       écran, pas une liste de paliers arbitraires. */
+    --min-vignette: 150px;
+
+    display: grid;
+    align-items: start;
+
+    /* Largeur idéale pour le nombre de colonnes demandé, plancher à
+       --min-vignette. Tant que la place suffit, on obtient exactement le
+       nombre voulu ; quand l'écran se resserre, la largeur idéale passe sous
+       le plancher, et auto-fill retire des colonnes de lui-même.
+
+       Aucun media query : le même calcul couvre toutes les tailles d'écran, et
+       le réglage de la collection reste un maximum plutôt qu'une contrainte
+       imposée au téléphone. */
+    grid-template-columns: repeat(
+        auto-fill,
+        minmax(
+            max(
+                var(--min-vignette),
+                calc( (100% - (var(--per-row, 3) - 1) * var(--grid-gap)) / var(--per-row, 3) )
+            ),
+            1fr
+        )
+    );
+}
+
+/* La hauteur redevient libre : chaque vignette suit ses propres proportions
+   dans la largeur de colonne qu'on lui donne. Sans cette remise à zéro, elle
+   conserverait la hauteur de rangée fixe et le flex-basis de la galerie
+   justifiée, qui n'ont plus de sens en grille. */
+.visual-collection__grid--fixe .visual-collection__item {
+    height: auto;
+    flex-basis: auto;
+    flex-grow: 0;
+    aspect-ratio: var(--ar, 1);
+}
+
+}
+
 @media (max-width: 1024px) { .visual-collection__grid { --v-row-h: 220px; } }
 @media (max-width: 640px)  { .visual-collection__grid { --v-row-h: 165px; } }
 

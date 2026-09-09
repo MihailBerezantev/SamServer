@@ -7,7 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'MD_VERSION', '4.9.28' );
+define( 'MD_VERSION', '4.9.31' );
 define( 'MD_DIR', get_template_directory() );
 define( 'MD_URI', get_template_directory_uri() );
 
@@ -27,7 +27,6 @@ require_once MD_DIR . '/inc/ajax-handlers.php';
 require_once MD_DIR . '/inc/inbox.php';         // BoÃ®te de rÃ©ception (wp-admin > E-mails)
 require_once MD_DIR . '/inc/bots.php';         // Bots : pages admin, réservées aux administrateurs
 require_once MD_DIR . '/inc/bots-runner.php';  // Bots : exécution via OmniRoute (local, 127.0.0.1)
-require_once MD_DIR . '/inc/gif-video.php';    // GIF animés servis en vidéo muette quand un .mp4 existe à côté
 require_once MD_DIR . '/inc/video-embeds.php'; // Vidéos YouTube des artistes
 require_once MD_DIR . '/inc/legacy-urls.php'; // Redirections 301 des anciennes URLs françaises
 require_once MD_DIR . '/inc/blocks.php';
