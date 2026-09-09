@@ -177,6 +177,64 @@ body {
     }
 }
 
+/* --- 5b. En-tête compact ----------------------------------------------- */
+/* Audit 375 px : logo 200 px de large → en-tête 320 px + nav 81 px = 401 px
+   avant la première ligne de contenu (la moitié de l'écran). */
+@media (max-width: 768px) {
+    .header-logo {
+        width: 140px;
+        max-width: 140px;
+    }
+    .header-subtitle {
+        margin-top: var(--space-xs);
+        font-size: 0.75rem;   /* 11,2 → 12 px */
+    }
+    .site-header {
+        padding-top: var(--space-sm);
+    }
+}
+
+/* --- 5c. Lecteur : barre de progression conservée sur téléphone --------- */
+/* player.css la masquait sous 768 px : impossible de voir où on en est ni
+   d'avancer dans un morceau. On la garde, fine, collée au bord supérieur du
+   lecteur, sur toute la largeur (les libellés de temps restent masqués). */
+@media (max-width: 768px) {
+    .player-progress {
+        display: flex;
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 3px;
+        gap: 0;
+    }
+    .player-progress .player-time {
+        display: none;
+    }
+    .player-progress-bar {
+        height: 3px;
+        border-radius: 0;
+    }
+    .player-progress-fill {
+        border-radius: 0;
+    }
+    .player-progress-fill::after {
+        opacity: 1;            /* le curseur reste visible : pas de survol au doigt */
+        width: 8px;
+        height: 8px;
+        right: -4px;
+    }
+    /* zone tactile étendue à 24 px sans changer le visuel */
+    .player-progress-bar::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: -14px;
+        bottom: -8px;
+    }
+}
+
 /* --- 6. Lisibilité du texte sur téléphone ------------------------------- */
 /* On remonte le texte de CONTENU à >= 14 px ; les micro-libellés
    volontairement discrets sont juste sortis du « trop petit » (>= 12 px). */
@@ -190,6 +248,26 @@ body {
     .footer-email,
     .footer-copyright        { font-size: 0.8125rem; }    /* 12,5 → 13 px  */
     .queue-clear             { font-size: 0.8125rem; }
+
+    /* Complément de l'audit du 9 septembre 2026 */
+    .filter-pill             { font-size: 0.8125rem; }   /* 11,2 → 13 px  (on les tape) */
+    .filter-group__label,
+    .meta-label,
+    .card-artiste__cta,
+    .card-release__artist,
+    .card-visual__artist,
+    .band-item__label        { font-size: 0.75rem; }     /* 10,4-11,2 → 12 px */
+    .form-label,
+    .upload-zone__text,
+    .upload-zone__formats    { font-size: 0.8125rem; }   /* 12 → 13 px */
+    .btn--filled             { font-size: 0.875rem; }    /* 12,8 → 14 px : action principale */
+
+    /* Titres de release / artiste : la nomenclature du label est longue
+       (« EXOTIC FRUIT JUICES #003 – SAM MARYU – LO-FI RAP » tenait sur 5 lignes à 48 px). */
+    .single-hero h1          { font-size: clamp(2rem, 9vw, 3rem); line-height: 1; }
+
+    /* Lien e-mail du pied de page : 21 px de haut → zone tactile de 44 px */
+    .footer-email            { display: inline-block; padding-block: 0.75rem; }
 }
 
 /* --- 7. Confort de lecture / marges ------------------------------------- */
@@ -198,6 +276,14 @@ body {
         /* marges latérales plus sobres : 32 px de chaque côté = trop sur 375 px */
         --container-padding: 1.25rem;
     }
+}
+
+/* --- 7b. GIF servis en vidéo (inc/gif-video.php) ------------------------ */
+.md-gif-video {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-width: 100%;
 }
 
 /* --- 8. Mouvement réduit ------------------------------------------------ */

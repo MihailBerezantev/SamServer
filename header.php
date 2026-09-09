@@ -16,9 +16,13 @@
 <header class="site-header" id="site-header">
     <a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="header-logo-link" aria-label="<?php esc_attr_e( 'Home', 'mango-dragon' ); ?>">
         <img
-            src="<?php echo esc_url( MD_URI . '/assets/images/logo-banner.png' ); ?>"
+            src="<?php echo esc_url( MD_URI . '/assets/images/logo-banner-600.png' ); ?>"
+            srcset="<?php echo esc_url( MD_URI . '/assets/images/logo-banner-600.png' ); ?> 600w, <?php echo esc_url( MD_URI . '/assets/images/logo-banner-1200.png' ); ?> 1200w"
+            sizes="(max-width: 768px) 140px, 280px"
+            width="600" height="800"
             alt="Mango Dragon International"
             class="header-logo"
+            fetchpriority="high"
         >
     </a>
     <p class="header-subtitle">Audiovisual Label — Geneva</p>
@@ -49,6 +53,9 @@
 
 <!-- Mobile Menu Overlay -->
 <div class="mobile-menu-overlay" id="mobile-menu-overlay" aria-hidden="true" role="dialog" aria-label="Mobile menu">
+    <button class="mobile-menu-close" id="mobile-menu-close" aria-label="<?php esc_attr_e( 'Close menu', 'mango-dragon' ); ?>">
+        <span class="hamburger" aria-hidden="true"></span>
+    </button>
     <?php
     wp_nav_menu( [
         'theme_location' => 'primary',
