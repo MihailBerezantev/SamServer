@@ -190,8 +190,51 @@ html.dark-mode .theme-toggle-icon::before {
     transition: var(--transition-color);
 }
 
-.mobile-menu-overlay.open {
+/* Le JS pilote l'ouverture via aria-hidden (app.js) ; `.open` conservé par compatibilité */
+.mobile-menu-overlay.open,
+.mobile-menu-overlay[aria-hidden="false"] {
     display: flex;
+}
+
+/* Menu ouvert : la page derrière ne défile plus */
+body.menu-open {
+    overflow: hidden;
+}
+
+/* Bouton de fermeture DANS l'overlay (le hamburger de la nav, pris dans le
+   contexte d'empilement de la barre sticky, passait sous l'overlay). */
+.mobile-menu-close {
+    position: absolute;
+    top: var(--space-sm);
+    right: var(--container-padding);
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.mobile-menu-close .hamburger {
+    background-color: transparent;
+}
+
+.mobile-menu-close .hamburger::before {
+    top: 0;
+    transform: rotate(45deg);
+}
+
+.mobile-menu-close .hamburger::after {
+    top: 0;
+    transform: rotate(-45deg);
+}
+
+/* Bascule de thème : en haut à gauche, symétrique du bouton de fermeture
+   (avant : position absolue sans `top` → flottait au milieu de l'écran). */
+.mobile-theme-toggle {
+    top: var(--space-sm);
+    left: var(--container-padding);
+    right: auto;
 }
 
 .mobile-nav-links {

@@ -49,6 +49,9 @@
 
 <!-- Mobile Menu Overlay -->
 <div class="mobile-menu-overlay" id="mobile-menu-overlay" aria-hidden="true" role="dialog" aria-label="Mobile menu">
+    <button class="mobile-menu-close" id="mobile-menu-close" aria-label="<?php esc_attr_e( 'Close menu', 'mango-dragon' ); ?>">
+        <span class="hamburger" aria-hidden="true"></span>
+    </button>
     <?php
     wp_nav_menu( [
         'theme_location' => 'primary',
