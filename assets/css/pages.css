@@ -1578,13 +1578,38 @@ body.page-id-23 .page-content p {
    En colonnes égales, le problème disparaît : la largeur se déduit du nombre
    d'images voulu, sans reste. */
 .visual-collection__grid--fixe {
+    /* Largeur minimale d'une vignette. En dessous, une pochette n'est plus
+       lisible : c'est ce seuil qui décide du nombre de colonnes sur petit
+       écran, pas une liste de paliers arbitraires. */
+    --min-vignette: 150px;
+
     display: grid;
-    grid-template-columns: repeat(var(--per-row, 3), 1fr);
     align-items: start;
+
+    /* Largeur idéale pour le nombre de colonnes demandé, plancher à
+       --min-vignette. Tant que la place suffit, on obtient exactement le
+       nombre voulu ; quand l'écran se resserre, la largeur idéale passe sous
+       le plancher, et auto-fill retire des colonnes de lui-même.
+
+       Aucun media query : le même calcul couvre toutes les tailles d'écran, et
+       le réglage de la collection reste un maximum plutôt qu'une contrainte
+       imposée au téléphone. */
+    grid-template-columns: repeat(
+        auto-fill,
+        minmax(
+            max(
+                var(--min-vignette),
+                calc( (100% - (var(--per-row, 3) - 1) * var(--grid-gap)) / var(--per-row, 3) )
+            ),
+            1fr
+        )
+    );
 }
 
 /* La hauteur redevient libre : chaque vignette suit ses propres proportions
-   dans la largeur de colonne qui lui est donnée. */
+   dans la largeur de colonne qu'on lui donne. Sans cette remise à zéro, elle
+   conserverait la hauteur de rangée fixe et le flex-basis de la galerie
+   justifiée, qui n'ont plus de sens en grille. */
 .visual-collection__grid--fixe .visual-collection__item {
     height: auto;
     flex-basis: auto;
@@ -1592,16 +1617,6 @@ body.page-id-23 .page-content p {
     aspect-ratio: var(--ar, 1);
 }
 
-/* Sous 640 px, cinq colonnes rendraient les vignettes illisibles : on plafonne
-   à deux, et à une seule sur les écrans les plus étroits. */
-@media (max-width: 900px) {
-    .visual-collection__grid--fixe { grid-template-columns: repeat(min(var(--per-row, 3), 3), 1fr); }
-}
-@media (max-width: 640px) {
-    .visual-collection__grid--fixe { grid-template-columns: repeat(min(var(--per-row, 2), 2), 1fr); }
-}
-@media (max-width: 420px) {
-    .visual-collection__grid--fixe { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 1024px) { .visual-collection__grid { --v-row-h: 220px; } }
