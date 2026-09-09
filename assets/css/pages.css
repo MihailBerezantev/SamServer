@@ -1482,12 +1482,15 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
     text-align: center;
 }
 .visual-intro__text {
-    /* Texte justifié, aligné sur les bords du contenu (mêmes bords que la grille). */
+    /* Aligné à gauche, pas justifié : la police du corps de texte est à chasse
+       fixe (DM Mono). La justification ne peut alors étirer que les espaces,
+       tous les caractères ayant la même largeur — d'où des trous irréguliers
+       entre les mots, qui donnent au bloc un aspect bancal. */
     max-width: none;
     margin: 0;
     font-family: var(--font-body);
     line-height: 1.7;
-    text-align: justify;
+    text-align: left;
     text-justify: inter-word;
 }
 .visual-intro__text p {
@@ -1544,9 +1547,11 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 .about-text p,
 body.page-id-23 .page-content,
 body.page-id-23 .page-content p {
-    /* cible aussi les <p> pour battre la classe Gutenberg `has-text-align-left`
-       (text-align:left posé directement sur chaque paragraphe). */
-    text-align: justify;
+    /* Aligné à gauche : voir .visual-intro__text — en chasse fixe, justifier
+       ne fait qu'écarter les mots de façon irrégulière.
+       La règle reste nécessaire pour battre la classe Gutenberg
+       `has-text-align-left` posée directement sur chaque paragraphe. */
+    text-align: left;
     text-justify: inter-word;
 }
 
