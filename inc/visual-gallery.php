@@ -17,6 +17,10 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 const MD_VISUAL_GALLERY_META = '_md_visual_gallery';
 
+// Nombre d'images par ligne choisi pour cette collection. 0 = automatique
+// (galerie justifiee a hauteur de rangee fixe).
+const MD_VISUAL_PER_ROW_META = '_md_visual_per_row';
+
 /**
  * IDs des photos de la collection d'un visuel.
  * Priorité : meta dédiée, puis repli sur une galerie du contenu.
@@ -60,6 +64,25 @@ function md_visual_gallery_cb( $post ) {
     <p class="description">
         Choisissez les photos de ce projet dans la médiathèque. Elles s'affichent sur la page du projet
         et s'ouvrent en grand (navigation par flèches). Glissez-déposez pour changer l'ordre.
+    </p>
+
+    <?php $md_per_row = (int) get_post_meta( $post->ID, MD_VISUAL_PER_ROW_META, true ); ?>
+    <p style="margin:14px 0">
+        <label for="md_visual_per_row"><strong>Images par ligne</strong></label>
+        <select name="md_visual_per_row" id="md_visual_per_row" style="margin-left:8px">
+            <option value="0"<?php selected( $md_per_row, 0 ); ?>>Automatique</option>
+            <?php for ( $n = 1; $n <= 5; $n++ ) : ?>
+                <option value="<?php echo (int) $n; ?>"<?php selected( $md_per_row, $n ); ?>><?php echo (int) $n; ?></option>
+            <?php endfor; ?>
+        </select>
+    </p>
+    <p class="description" style="margin-top:-6px">
+        <strong>Automatique</strong> : hauteur de rangée fixe, chaque image garde ses proportions et
+        les images non carrées s'étirent pour atteindre les bords. Adapté aux collections mélangeant
+        les formats — mais si <em>toutes</em> les images sont carrées, rien n'absorbe l'espace restant
+        et la dernière colonne reste vide.<br>
+        <strong>1 à 5</strong> : nombre d'images par ligne imposé, réparties sur toute la largeur.
+        C'est le réglage à choisir pour une collection de pochettes carrées.
     </p>
 
     <ul id="md-vis-gallery-list" class="md-vis-gallery__list">
@@ -171,5 +194,19 @@ add_action( 'save_post_visual', function ( $post_id ) {
         delete_post_meta( $post_id, MD_VISUAL_GALLERY_META );
     } else {
         update_post_meta( $post_id, MD_VISUAL_GALLERY_META, $ids );
+    }
+
+    // Images par ligne : 0 (automatique) ou 1 a 5. Toute autre valeur est
+    // ramenee a 0 plutot que rejetee — un reglage aberrant ne doit pas empecher
+    // d'enregistrer les photos.
+    $par_ligne = isset( $_POST['md_visual_per_row'] ) ? (int) $_POST['md_visual_per_row'] : 0;
+    if ( $par_ligne < 1 || $par_ligne > 5 ) {
+        $par_ligne = 0;
+    }
+
+    if ( 0 === $par_ligne ) {
+        delete_post_meta( $post_id, MD_VISUAL_PER_ROW_META );
+    } else {
+        update_post_meta( $post_id, MD_VISUAL_PER_ROW_META, $par_ligne );
     }
 } );

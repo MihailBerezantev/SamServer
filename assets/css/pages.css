@@ -1566,6 +1566,44 @@ body.page-id-23 .page-content p {
     --v-row-h: 260px; /* rangées plus hautes → images plus grandes, ~3 par rangée (bureau) */
 }
 
+/* Mode « images par ligne imposé », choisi sur la collection.
+
+   La galerie justifiée ci-dessus dimensionne par la hauteur : chaque vignette
+   prend sa largeur naturelle, et les images NON carrées s'étirent pour venir
+   toucher les bords. Quand une collection ne contient que des carrés, ce
+   mécanisme ne peut pas jouer — les carrés ont un flex-grow nul pour ne jamais
+   se déformer, donc l'espace restant en fin de rangée n'est absorbé par
+   personne : dernière colonne vide et alignement bancal.
+
+   En colonnes égales, le problème disparaît : la largeur se déduit du nombre
+   d'images voulu, sans reste. */
+.visual-collection__grid--fixe {
+    display: grid;
+    grid-template-columns: repeat(var(--per-row, 3), 1fr);
+    align-items: start;
+}
+
+/* La hauteur redevient libre : chaque vignette suit ses propres proportions
+   dans la largeur de colonne qui lui est donnée. */
+.visual-collection__grid--fixe .visual-collection__item {
+    height: auto;
+    flex-basis: auto;
+    flex-grow: 0;
+    aspect-ratio: var(--ar, 1);
+}
+
+/* Sous 640 px, cinq colonnes rendraient les vignettes illisibles : on plafonne
+   à deux, et à une seule sur les écrans les plus étroits. */
+@media (max-width: 900px) {
+    .visual-collection__grid--fixe { grid-template-columns: repeat(min(var(--per-row, 3), 3), 1fr); }
+}
+@media (max-width: 640px) {
+    .visual-collection__grid--fixe { grid-template-columns: repeat(min(var(--per-row, 2), 2), 1fr); }
+}
+@media (max-width: 420px) {
+    .visual-collection__grid--fixe { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 1024px) { .visual-collection__grid { --v-row-h: 220px; } }
 @media (max-width: 640px)  { .visual-collection__grid { --v-row-h: 165px; } }
 
