@@ -7,7 +7,7 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
-define( 'MD_VERSION', '4.9.31' );
+define( 'MD_VERSION', '4.9.32' );
 define( 'MD_DIR', get_template_directory() );
 define( 'MD_URI', get_template_directory_uri() );
 
@@ -27,6 +27,7 @@ require_once MD_DIR . '/inc/ajax-handlers.php';
 require_once MD_DIR . '/inc/inbox.php';         // BoÃ®te de rÃ©ception (wp-admin > E-mails)
 require_once MD_DIR . '/inc/bots.php';         // Bots : pages admin, réservées aux administrateurs
 require_once MD_DIR . '/inc/bots-runner.php';  // Bots : exécution via OmniRoute (local, 127.0.0.1)
+require_once MD_DIR . '/inc/gif-video.php';    // GIF animés servis en vidéo muette quand un .mp4 existe à côté
 require_once MD_DIR . '/inc/video-embeds.php'; // Vidéos YouTube des artistes
 require_once MD_DIR . '/inc/legacy-urls.php'; // Redirections 301 des anciennes URLs françaises
 require_once MD_DIR . '/inc/blocks.php';
@@ -341,6 +342,26 @@ function md_customize_register( $wp_customize ) {
         ] );
     }
 
+    // ------------------------------------------------------------------
+    // Section: Pied de page — liens sociaux (vides = icône masquée)
+    // ------------------------------------------------------------------
+    $wp_customize->add_section( 'md_footer_links', [
+        'title'    => __( 'Pied de page — liens', 'mango-dragon' ),
+        'priority' => 32,
+    ] );
+    foreach ( md_footer_social_platforms() as $key => $platform ) {
+        $wp_customize->add_setting( "md_social_{$key}", [
+            'default'           => '',
+            'sanitize_callback' => 'esc_url_raw',
+        ] );
+        $wp_customize->add_control( "md_social_{$key}", [
+            'label'       => $platform['label'],
+            'section'     => 'md_footer_links',
+            'type'        => 'url',
+            'input_attrs' => [ 'placeholder' => $platform['placeholder'] ],
+        ] );
+    }
+
     // Bright mode background
     $wp_customize->add_setting( 'md_bg_bright', [
         'default'           => '#f7f4eb',
@@ -364,6 +385,52 @@ function md_customize_register( $wp_customize ) {
     ] ) );
 }
 add_action( 'customize_register', 'md_customize_register' );
+
+/**
+ * Plateformes du pied de page, dans l'ordre d'affichage.
+ * Spotify retiré le 2026-09-09 à la demande de Mihail, remplacé par Linktree.
+ */
+function md_footer_social_platforms() {
+    return [
+        'instagram'  => [
+            'label'       => 'Instagram',
+            'placeholder' => 'https://www.instagram.com/…',
+            'icon'        => '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>',
+        ],
+        'soundcloud' => [
+            'label'       => 'SoundCloud',
+            'placeholder' => 'https://soundcloud.com/…',
+            'icon'        => '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M11.56 8.87V17h8.76c1.85-.04 2.68-1.18 2.68-2.57 0-1.41-1.04-2.56-2.46-2.56-.34 0-.67.07-.96.2-.31-2.33-2.27-4.1-4.68-4.1-1.19 0-2.27.44-3.1 1.15-.12.1-.24.34-.24.52v.23zM10.22 9.3V17h.67V8.97c-.21.09-.46.19-.67.33zM9.06 10.13V17h.67V9.6c-.23.15-.45.33-.67.53zM7.9 17h.67V11.2c-.13.2-.32.37-.47.54-.07.06-.14.12-.2.18V17zM6.73 17h.67v-4.49c-.23.3-.44.63-.67.97V17zM5.57 17h.67v-2.6c-.17.39-.37.77-.55 1.15-.04.08-.08.16-.12.24V17zM4.4 17h.67v-.58c-.22.24-.43.39-.67.58zM1.23 15.53c0 .81.66 1.47 1.47 1.47.82 0 1.48-.66 1.48-1.47v-1.7c-.4-.2-.84-.31-1.31-.31-.65 0-1.22.23-1.64.72v1.29z"/></svg>',
+        ],
+        'bandcamp'   => [
+            'label'       => 'Bandcamp',
+            'placeholder' => 'https://….bandcamp.com/',
+            'icon'        => '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M0 18.75l7.437-13.5H24l-7.438 13.5H0z"/></svg>',
+        ],
+        'linktree'   => [
+            'label'       => 'Linktree',
+            'placeholder' => 'https://linktr.ee/…',
+            // Arbre à six branches, dessin du logo Linktree simplifié.
+            'icon'        => '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M10.9 0h2.2v6.6l4.7-4.7 1.55 1.55-4.7 4.7H21.3v2.2h-6.65l4.7 4.7-1.55 1.55L13.1 11.9V24h-2.2V11.9l-4.7 4.7-1.55-1.55 4.7-4.7H2.7v-2.2h6.65L4.65 3.45 6.2 1.9l4.7 4.7z"/></svg>',
+        ],
+    ];
+}
+
+/**
+ * Liens du pied de page réellement renseignés (Apparence > Personnaliser >
+ * Pied de page — liens). Une URL vide = icône absente : plus de lien mort « # ».
+ */
+function md_footer_social_links() {
+    $links = [];
+    foreach ( md_footer_social_platforms() as $key => $platform ) {
+        $url = trim( (string) get_theme_mod( "md_social_{$key}", '' ) );
+        if ( '' === $url ) {
+            continue;
+        }
+        $links[] = [ 'url' => $url, 'label' => $platform['label'], 'icon' => $platform['icon'] ];
+    }
+    return $links;
+}
 
 function md_customize_css() {
     $bright = get_theme_mod( 'md_bg_bright', '#f7f4eb' );
