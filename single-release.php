@@ -217,6 +217,33 @@ foreach ( $artist_ids as $aid ) {
 </section>
 <?php endif; ?>
 
+<!-- VIDÉOS : placées après la tracklist, avant les champs supplémentaires -->
+<?php
+$md_release_videos = function_exists( 'md_youtube_ids' )
+    ? md_youtube_ids( get_post_meta( $release_id, '_md_videos', true ) )
+    : [];
+if ( $md_release_videos ) :
+?>
+<section class="single-videos section">
+    <div class="container">
+        <h2>Videos</h2>
+        <div class="video-grid">
+            <?php foreach ( $md_release_videos as $md_vid ) : ?>
+            <div class="video-embed">
+                <iframe
+                    src="<?php echo esc_url( md_youtube_embed_url( $md_vid ) ); ?>"
+                    title="<?php echo esc_attr( sprintf( 'Vidéo — %s', get_the_title( $release_id ) ) ); ?>"
+                    loading="lazy"
+                    allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    referrerpolicy="strict-origin-when-cross-origin"
+                    allowfullscreen></iframe>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</section>
+<?php endif; ?>
+
 <!-- CHAMPS ACF SUPPLÉMENTAIRES (ajoutés via l'interface ACF, affichés automatiquement) -->
 <?php if ( function_exists( 'md_render_extra_acf_fields' ) ) : ?>
 <section class="single-extra section">

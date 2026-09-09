@@ -70,7 +70,7 @@ function md_youtube_embed_url( $id ) {
  */
 add_action( 'add_meta_boxes', 'md_add_videos_meta_box' );
 function md_add_videos_meta_box() {
-    foreach ( [ 'artiste', 'visual' ] as $type ) {
+    foreach ( [ 'artiste', 'visual', 'release' ] as $type ) {
         add_meta_box(
             'md_videos_box',
             'Vidéos YouTube',
@@ -163,6 +163,7 @@ function md_videos_meta_box_cb( $post ) {
  */
 add_action( 'save_post_artiste', 'md_save_videos_meta' );
 add_action( 'save_post_visual', 'md_save_videos_meta' );
+add_action( 'save_post_release', 'md_save_videos_meta' );
 function md_save_videos_meta( $post_id ) {
     if ( ! isset( $_POST['md_videos_nonce'] ) || ! wp_verify_nonce( $_POST['md_videos_nonce'], 'md_videos_save' ) ) {
         return;
