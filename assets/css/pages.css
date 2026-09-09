@@ -1482,15 +1482,20 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
     text-align: center;
 }
 .visual-intro__text {
-    /* Aligné à gauche, pas justifié : la police du corps de texte est à chasse
-       fixe (DM Mono). La justification ne peut alors étirer que les espaces,
-       tous les caractères ayant la même largeur — d'où des trous irréguliers
-       entre les mots, qui donnent au bloc un aspect bancal. */
     max-width: none;
     margin: 0;
     font-family: var(--font-body);
     line-height: 1.7;
-    text-align: left;
+    text-align: justify;
+
+    /* Césure indispensable ici : le corps de texte est en DM Mono, une police à
+       chasse fixe. Sans elle, la justification ne peut étirer que les espaces —
+       tous les caractères faisant la même largeur — et creuse des trous
+       irréguliers entre les mots. En autorisant la coupure en fin de ligne, le
+       navigateur répartit bien mieux et les écarts restent discrets.
+       Fonctionne grâce au lang="en-GB" posé sur <html> par le thème. */
+    hyphens: auto;
+    -webkit-hyphens: auto;
     text-justify: inter-word;
 }
 .visual-intro__text p {
@@ -1547,11 +1552,12 @@ body { display: flex; flex-direction: column; min-height: 100vh; }
 .about-text p,
 body.page-id-23 .page-content,
 body.page-id-23 .page-content p {
-    /* Aligné à gauche : voir .visual-intro__text — en chasse fixe, justifier
-       ne fait qu'écarter les mots de façon irrégulière.
-       La règle reste nécessaire pour battre la classe Gutenberg
+    /* Justifié, avec césure : voir .visual-intro__text pour le pourquoi.
+       La règle vise aussi les <p> pour battre la classe Gutenberg
        `has-text-align-left` posée directement sur chaque paragraphe. */
-    text-align: left;
+    text-align: justify;
+    hyphens: auto;
+    -webkit-hyphens: auto;
     text-justify: inter-word;
 }
 
