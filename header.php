@@ -16,9 +16,13 @@
 <header class="site-header" id="site-header">
     <a href="<?php echo esc_url( home_url( '/' ) ); ?>" class="header-logo-link" aria-label="<?php esc_attr_e( 'Home', 'mango-dragon' ); ?>">
         <img
-            src="<?php echo esc_url( MD_URI . '/assets/images/logo-banner.png' ); ?>"
+            src="<?php echo esc_url( MD_URI . '/assets/images/logo-banner-600.png' ); ?>"
+            srcset="<?php echo esc_url( MD_URI . '/assets/images/logo-banner-600.png' ); ?> 600w, <?php echo esc_url( MD_URI . '/assets/images/logo-banner-1200.png' ); ?> 1200w"
+            sizes="(max-width: 768px) 140px, 280px"
+            width="600" height="800"
             alt="Mango Dragon International"
             class="header-logo"
+            fetchpriority="high"
         >
     </a>
     <p class="header-subtitle">Audiovisual Label — Geneva</p>
